@@ -1,11 +1,10 @@
 # syntax=docker/dockerfile:1.7
-# Backend image. Bun runs TypeScript directly, no build step needed —
-# we install workspace deps in one stage, then copy sources + installed
-# node_modules into a minimal runtime image.
-#
-# Workspace shape: apps/backend depends on @mpckit/core (packages/core)
-# and @mpckit/sdk (packages/sdk-ts). Both export src/ directly, so we
-# ship their source too.
+# Backend image. Three stages:
+#   deps  - install workspace deps from manifests + lockfile
+#   build - build @mpckit/core and @mpckit/sdk so packages/*/dist exists
+#           (their package.json points main/exports at dist/, so the
+#           backend's workspace imports fail without this step)
+#   runtime - minimal image with the resolved tree + backend source
 
 ARG BUN_VERSION=1.3.10
 
@@ -30,6 +29,22 @@ COPY examples/ts-browser/package.json examples/ts-browser/
 
 RUN bun install --frozen-lockfile --ignore-scripts
 
+# ---- build stage ------------------------------------------------------
+# @mpckit/core and @mpckit/sdk are workspace deps whose package.json
+# points "main"/"exports" at ./dist/index.js (so npm consumers get the
+# built tarball). The backend imports them via workspace resolution, so
+# dist/ must exist before runtime or Bun's resolver throws MODULE_NOT_FOUND.
+FROM oven/bun:${BUN_VERSION}-alpine AS build
+WORKDIR /app
+COPY --from=deps /app /app
+COPY packages/core ./packages/core
+COPY packages/sdk-ts ./packages/sdk-ts
+# tsup inlines the backend App type into dist/eden.d.ts via a relative
+# import (packages/sdk-ts/src/eden.ts), so apps/backend source needs to
+# be present at build time even though we're not building backend itself.
+COPY apps/backend ./apps/backend
+RUN bun run build --filter='@mpckit/core' --filter='@mpckit/sdk'
+
 # ---- runtime stage ----------------------------------------------------
 FROM oven/bun:${BUN_VERSION}-alpine AS runtime
 # image.source links the package to its origin repo on ghcr.io so the
@@ -45,15 +60,9 @@ ENV NODE_ENV=production \
 # curl is used by the healthcheck.
 RUN apk add --no-cache curl
 
-# Bring in the entire deps result (root + per-workspace node_modules).
-# Then overlay sources for the packages the backend touches. Bun's
-# isolated installer stores per-workspace deps under each workspace's
-# own node_modules, so copying only the root /app/node_modules would
-# leave apps/backend and packages/* unable to resolve imports.
-COPY --from=deps /app /app
-COPY apps/backend ./apps/backend
-COPY packages/core ./packages/core
-COPY packages/sdk-ts ./packages/sdk-ts
+# Pull the fully-resolved tree from the build stage: node_modules,
+# built packages/*/dist, and apps/backend source.
+COPY --from=build /app /app
 
 # Drop privileges. The `bun` user is shipped by the base image.
 USER bun
