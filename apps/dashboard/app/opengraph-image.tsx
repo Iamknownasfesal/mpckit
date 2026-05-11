@@ -9,6 +9,7 @@ const BONE = "#f8fafc";
 const MUTED = "rgba(248, 250, 252, 0.62)";
 const TEAL = "#2dd4d2";
 const HAIRLINE = "rgba(248, 250, 252, 0.10)";
+const BG = "#020404";
 
 export default function OpenGraphImage() {
   return new ImageResponse(
@@ -26,12 +27,8 @@ export default function OpenGraphImage() {
       }}
     >
       <svg
-        viewBox="0 0 32 32"
+        viewBox="0 0 100 100"
         xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        strokeWidth={1.4}
-        strokeLinecap="round"
-        strokeLinejoin="round"
         style={{
           position: "absolute",
           bottom: -120,
@@ -41,9 +38,10 @@ export default function OpenGraphImage() {
           opacity: 0.08,
         }}
       >
-        <path d="M 4 26 L 4 6 L 11 18 L 18 6 L 18 26" stroke={BONE} />
-        <path d="M 18 16 L 28 6" stroke={TEAL} />
-        <path d="M 18 16 L 28 26" stroke={TEAL} />
+        <circle cx="50" cy="50" r="35" fill={BONE} />
+        <circle cx="27" cy="27" r="25" fill={BG} />
+        <circle cx="31" cy="31" r="7" fill={BONE} />
+        <circle cx="36" cy="36" r="5" fill={BG} />
       </svg>
 
       <div
@@ -80,12 +78,8 @@ export default function OpenGraphImage() {
         >
           <div style={{ display: "flex", alignItems: "center" }}>
             <svg
-              viewBox="0 0 32 32"
+              viewBox="0 0 100 100"
               xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              strokeWidth={2.4}
-              strokeLinecap="round"
-              strokeLinejoin="round"
               style={{
                 display: "block",
                 width: 88,
@@ -93,9 +87,10 @@ export default function OpenGraphImage() {
                 marginRight: 28,
               }}
             >
-              <path d="M 4 26 L 4 6 L 11 18 L 18 6 L 18 26" stroke={BONE} />
-              <path d="M 18 16 L 28 6" stroke={TEAL} />
-              <path d="M 18 16 L 28 26" stroke={TEAL} />
+              <circle cx="50" cy="50" r="35" fill={BONE} />
+              <circle cx="27" cy="27" r="25" fill={BG} />
+              <circle cx="31" cy="31" r="7" fill={BONE} />
+              <circle cx="36" cy="36" r="5" fill={BG} />
             </svg>
             <span
               style={{

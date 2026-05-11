@@ -1,8 +1,8 @@
 /**
- * MpcKit brand mark. An "M" flowing into a "K" through a shared
- * vertical stroke: two letters, one continuous backbone. The K's
- * diagonals are picked out in the brand teal so the monogram reads
- * as "MK" without spelling it out.
+ * MpcKit brand mark. A moon with its top-left bitten out (~25% gone),
+ * and a smaller moon inside the gap whose bite faces the opposite
+ * direction (bottom-right). The two crescents read as parties combining
+ * into one signature: the MPC ceremony, geometrically.
  */
 type Props = {
   size?: number;
@@ -14,19 +14,36 @@ export function Mark({ size = 28, className }: Props) {
     <svg
       width={size}
       height={size}
-      viewBox="0 0 32 32"
+      viewBox="0 0 100 100"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-label="MpcKit"
       role="img"
-      fill="none"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
     >
-      <path d="M 4 26 L 4 6 L 11 18 L 18 6 L 18 26" stroke="currentColor" />
-      <path d="M 18 16 L 28 6" stroke="#2dd4d2" />
-      <path d="M 18 16 L 28 26" stroke="#2dd4d2" />
+      <defs>
+        <mask id="mpckit-docs-mark-moon">
+          <rect width="100" height="100" fill="white" />
+          <circle cx="27" cy="27" r="25" fill="black" />
+        </mask>
+        <mask id="mpckit-docs-mark-small">
+          <rect width="100" height="100" fill="white" />
+          <circle cx="36" cy="36" r="5" fill="black" />
+        </mask>
+      </defs>
+      <circle
+        cx="50"
+        cy="50"
+        r="35"
+        fill="currentColor"
+        mask="url(#mpckit-docs-mark-moon)"
+      />
+      <circle
+        cx="31"
+        cy="31"
+        r="7"
+        fill="currentColor"
+        mask="url(#mpckit-docs-mark-small)"
+      />
     </svg>
   );
 }
