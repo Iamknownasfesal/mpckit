@@ -1,0 +1,113 @@
+---
+title: dWallets
+description: The on-chain unit of ownership in mpckit, and the local state you have to keep alongside it.
+---
+
+A **dWallet** is an MPC-key-pair anchored on Sui. The public key (and
+the addresses it derives) lives on chain; the secret has been split at
+DKG time between two parties and never reassembled.
+
+## The DWallet record
+
+`api.getDWallet(id)` returns the `DWallet` shape exported from
+`@mpckit/sdk`:
+
+<TypeTable
+  type={{
+    id: { description: "Backend record id (UUID).", type: "string" },
+    suiDwalletId: { description: "Sui object id of the on-chain dWallet record.", type: "string" },
+    curve: { description: "0=SECP256K1, 1=SECP256R1, 2=ED25519, 3=RISTRETTO.", type: "number" },
+    kind: { description: "How the user share is held.", type: "\"zero_trust\" | \"shared\"" },
+    status: { description: "Lifecycle stage.", type: "\"submitting\" | \"awaiting_user_share\" | \"active\" | \"failed\"" },
+    encryptionKeyId: { description: "Backend id of the class-groups encryption key used by DKG.", type: "string" },
+    dkgTxDigest: { description: "Sui tx digest of the on-chain DKG submission.", type: "string | null" },
+    acceptTxDigest: { description: "Sui tx digest of the user-share accept call.", type: "string | null" },
+  }}
+/>
+
+The Sui record at `suiDwalletId` is the source of truth. The backend
+row mirrors it for fast reads. You can read the on-chain state
+directly via the SDK's lazy `IkaClient` if you need to bypass the
+cache.
+
+## Zero-trust vs shared
+
+Every dWallet has a `kind`:
+
+- **`zero_trust`**: the user share lives client-side, encrypted under
+  a class-groups key derived from your seed. The high-level `onboard`
+  produces this kind.
+- **`shared`**: the user share is also escrowed on the network for
+  multi-party scenarios. v1 of `@mpckit/sdk` exposes only zero-trust;
+  shared support lands later.
+
+For both kinds, the network share is held by ika validators and gated by
+the on-chain encryption key.
+
+## Lifecycle
+
+A dWallet moves through `status` values in order:
+
+<Steps>
+
+<Step>
+
+### `submitting`
+
+The SDK has just posted the DKG message; the on-chain submission is
+in flight.
+
+</Step>
+
+<Step>
+
+### `awaiting_user_share`
+
+The on-chain DKG completed. The user share is encrypted client-side and
+needs to be accepted on chain. `onboard` polls for this state, then
+finalizes.
+
+</Step>
+
+<Step>
+
+### `active`
+
+The dWallet is signable. Both `dkgTxDigest` and `acceptTxDigest` are set.
+
+</Step>
+
+<Step>
+
+### `failed`
+
+The DKG or accept call failed. Inspect the on-chain state for the cause.
+
+</Step>
+
+</Steps>
+
+## What lives where
+
+| Where           | What                                                                        |
+| --------------- | --------------------------------------------------------------------------- |
+| Sui (on chain)  | dWallet record, encryption key public component, **`EncryptedUserSecretKeyShare`**, DKG tx, accept tx |
+| Backend         | `DWallet` row mirroring on-chain state, billing rows                        |
+| Your storage    | The **seed** (must keep). Optionally: `userSecretKeyShareHex` cache, `userPublicOutputHex` cache |
+
+The split matters. mpckit can be down and your dWallets are still
+recoverable from the chain, as long as you have the seed: the SDK
+reads the encrypted share from Sui and decrypts it with the
+seed-derived decryption key. The plaintext share you got from
+`onboard` is a convenience cache, not a backup.
+
+## Listing & fetching
+
+```ts
+const { dwallets } = await api.listDWallets();
+const { dwallet } = await api.getDWallet(dwallets[0].id);
+```
+
+Both calls are simple HTTP reads against the backend's mirror of Sui
+state. Use `MpcKit.raw.get(...)` if you want to call the backend
+directly.

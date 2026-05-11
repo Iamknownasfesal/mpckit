@@ -1,0 +1,61 @@
+---
+title: Query hooks
+description: TanStack Query hooks over the read methods of MpcKit.
+---
+
+All query hooks return the standard TanStack Query shape:
+`{ data, error, isLoading, isFetching, refetch, ... }`. They participate
+in your app's `QueryClient` cache, refetch on focus and reconnect by
+default, and can be invalidated manually via
+[query keys](/docs/react/query-keys).
+
+## Network and project state
+
+```tsx
+import {
+  useNetworkInfo,
+  useBalance,
+  useDepositAddress,
+  usePricing,
+  useBillingHistory,
+} from "@mpckit/react";
+
+const { data: net } = useNetworkInfo();
+const { data: bal } = useBalance();
+const { data: addr } = useDepositAddress();
+const { data: pricing } = usePricing();
+const { data: history } = useBillingHistory();
+```
+
+## dWallets
+
+```tsx
+import { useDWallet, useDWallets } from "@mpckit/react";
+
+const { data: list } = useDWallets();
+const { data: detail } = useDWallet(dwalletId);
+```
+
+`useDWallet(id)` is gated on `id` being truthy. While `id` is
+`undefined`, the query stays in idle state, so it's safe to call
+unconditionally with a possibly-undefined id from a route param.
+
+```tsx
+const params = useParams();
+const { data, isLoading } = useDWallet(params.dwalletId);
+```
+
+## Per-hook options
+
+Every query hook accepts a second argument that is forwarded to
+TanStack's `useQuery`:
+
+```tsx
+const { data } = useBalance({
+  refetchInterval: 5_000,
+  staleTime: 60_000,
+});
+```
+
+Pass `enabled: false` to defer a query until you decide to run it
+imperatively via `refetch`.

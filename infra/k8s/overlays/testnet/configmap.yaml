@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mpckit-config
+  namespace: mpckit-testnet
+# One backend, both networks. Drop any block whose chain you don't want
+# to serve; the backend resolves enabled networks from the presence of
+# MPCKITCORE_<NET>_PACKAGE_ID and refuses requests targeting a network
+# whose env block is missing.
+data:
+  LOG_LEVEL: "info"
+  PROCESS_TYPE: "both"
+  ALLOW_SHARED_DWALLETS: "false"
+
+  # Default network for anonymous endpoints (no api key, no x-network).
+  # Must be one of the enabled networks below; falls back to the first
+  # enabled one if absent.
+  IKA_DEFAULT_NETWORK: "testnet"
+
+  # ── testnet ────────────────────────────────────────────────────────
+  MPCKITCORE_TESTNET_PACKAGE_ID: "0xc05826b4e028300bb9a500e2d15ed0250e6302a4e86523585dd3afbe98c3c354"
+  MPCKITCORE_TESTNET_ADMIN_CAP_ID: "0xdc6a2a118aa815bbbf90083f10fb402cf050ec922effed71bde0724049e32295"
+  MPCKITCORE_TESTNET_OPERATOR_CAP_ID: "0xed93e5c17e91cf32e6fb2eed01a05bd223d0fee90789843cc44f1c59689fe5b4"
+  MPCKITCORE_TESTNET_TREASURY_ID: "0x745d784aaf8d77daec17d8ec0a87c1f46415b1e416478d36723a43fbc18d1f19"
+  # Defaults to the public Mysten endpoint when unset.
+  # SUI_GRPC_URL_TESTNET: "https://fullnode.testnet.sui.io:443"
+  SUI_GAS_STATION_TESTNET_URL: "http://gas-station-testnet:9527"
+
+  # ── mainnet ────────────────────────────────────────────────────────
+  MPCKITCORE_MAINNET_PACKAGE_ID: "0xe36d3aba995816e6696137a341ba2e09ce0cb2058de02aa7a4285ab9bb44cfd5"
+  MPCKITCORE_MAINNET_ADMIN_CAP_ID: "0x0908fdfa59f566913a5cbed406aedc09af2861416e0796da0616cd13266c0472"
+  MPCKITCORE_MAINNET_OPERATOR_CAP_ID: "0x6ce2ce1cc3833436f30782dbd382ae5fca132b2abdd7eb3e66e22a7a6363315a"
+  MPCKITCORE_MAINNET_TREASURY_ID: "0xefb93b87fdca3b730c90a073750f61ff469f7bda6e2d4721b577af2adee8028b"
+  # SUI_GRPC_URL_MAINNET: "https://fullnode.mainnet.sui.io:443"
+  SUI_GAS_STATION_MAINNET_URL: "http://gas-station-mainnet:9527"
+
+  SUI_GAS_STATION_BUDGET_MIST: "500000000"
+  SUI_GAS_STATION_RESERVE_SECS: "30"
+
+  # Billing. Prices apply across networks; bill the user in microUSD,
+  # the backend converts to per-network gas/IKA at submit time.
+  BILLING_ACCEPTED_COIN_TYPES: "0x2::sui::SUI"
+  BILLING_USD_PRICES: "0x2::sui::SUI=1.0"
+  BILLING_COINGECKO_IDS: "0x2::sui::SUI=sui"
+  BILLING_PRICE_DKG_MICRO: "50000"
+  BILLING_PRICE_SIGN_MICRO: "10000"
+  BILLING_PRICE_ENCRYPTION_KEY_MICRO: "1000"
+  BILLING_MIN_DEPOSIT_MICRO: "1000"
+
+  # Dashboard + docs are network-agnostic; one stack serves both
+  # chains at the production hostnames. The dashboard pivots networks
+  # via the x-network header.
+  NEXT_PUBLIC_BACKEND_URL: "https://api.mpckit.xyz"
+  BETTER_AUTH_URL: "https://api.mpckit.xyz"
+  DASHBOARD_TRUSTED_ORIGINS: "https://app.mpckit.xyz,https://mpckit.xyz"
+
+  # Presign pool.
+  PRESIGN_POOL_LOW_WATER: "20"
+  PRESIGN_POOL_HIGH_WATER: "100"
+  PRESIGN_BATCH_SIZE: "10"
+  PRESIGN_RESERVATION_TTL_SEC: "300"
+  PRICING_SAFETY_MULTIPLIER: "1.5"

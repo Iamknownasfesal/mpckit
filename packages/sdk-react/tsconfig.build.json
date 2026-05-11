@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "incremental": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "rootDir": "src",
+    "jsx": "react-jsx",
+    "types": ["react"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["../../apps/backend/src/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

@@ -1,0 +1,68 @@
+[package]
+name = "mpckit"
+description = "Rust SDK for MpcKit — hosted MPC signing for Sui dWallets."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage = "https://mpckit.xyz"
+documentation = "https://docs.mpckit.xyz"
+readme = "../../README.md"
+keywords = ["mpc", "sui", "ika", "dwallet", "wallet"]
+categories = ["cryptography", "api-bindings"]
+
+[features]
+default = []
+# Enables the `crypto` module (`UserShareEncryptionKeys`, `prepare_dkg`,
+# `centralized_sign`) and the high-level `MpcKit::onboard` /
+# `MpcKit::sign` ceremonies. Pulls in the dwallet-labs/ika native
+# crypto crates + a `[patch.crates-io]` block from the workspace; the
+# default build is HTTP-only and stays light.
+#
+# The RustCrypto pre-release crates listed under this feature aren't
+# used directly by sdk-rust — they're declared so cargo locks the
+# transitive graph to the same versions inkrypto compiled against.
+# Without them, `primefield` resolves to an incompatible crates.io
+# version and the build fails at the `crypto_bigint::Choice` /
+# `subtle::Choice` boundary.
+crypto = [
+    "dep:dwallet-mpc-centralized-party",
+    "dep:fastcrypto",
+    "dep:hex",
+    "dep:crypto-bigint",
+    "dep:k256",
+    "dep:p256",
+    "dep:curve25519-dalek",
+    "dep:signature",
+]
+
+[dependencies]
+base64.workspace = true
+hex = { workspace = true, optional = true }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["sync"] }
+url.workspace = true
+uuid.workspace = true
+
+dwallet-mpc-centralized-party = { workspace = true, optional = true }
+fastcrypto = { workspace = true, optional = true }
+# RustCrypto pre-release pins (see [features].crypto comment).
+crypto-bigint = { workspace = true, optional = true }
+k256 = { workspace = true, optional = true }
+p256 = { workspace = true, optional = true }
+curve25519-dalek = { workspace = true, optional = true }
+signature = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio.workspace = true
+wiremock.workspace = true
+
+# Bench example needs crypto + a few extras (env, hex). Keep them
+# behind dev-dependencies so the lib stays slim.
+
+[[example]]
+name = "bench_detailed"
+required-features = ["crypto"]

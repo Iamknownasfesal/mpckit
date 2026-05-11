@@ -1,0 +1,47 @@
+---
+title: Introspection
+description: health, network_info, and protocol_parameters.
+---
+
+```rust
+use mpckit::Curve;
+
+api.health().await?;
+api.network_info().await?;
+api.protocol_parameters(Curve::Secp256k1).await?; // Vec<u8>, cached
+api.invalidate_protocol_parameters_cache().await;
+```
+
+## `health()`
+
+Returns `Health { ok, service, uptime, now }`. Plug it into your
+service's liveness check.
+
+## `network_info()`
+
+Returns the operator's Sui address, the deployed ika package ids, the
+coordinator and system object ids, and the latest network encryption
+key. Mirrors the TypeScript `NetworkInfo` shape.
+
+```rust
+let info = api.network_info().await?;
+println!("operator={}", info.operator_address);
+println!("ika package={}", info.packages.ika_package);
+println!("dwallet package={}", info.packages.ika_dwallet_2pc_mpc_package);
+println!("coordinator={}", info.objects.coordinator);
+println!("latest enc key={}", info.latest_encryption_key.id);
+```
+
+## `protocol_parameters(curve)`
+
+Returns the on-chain protocol public parameters for the given curve as
+`Vec<u8>`. The result is cached after the first read; the cache lives
+in the `MpcKit` instance, so cloning shares it. To force a refresh:
+
+```rust
+api.invalidate_protocol_parameters_cache().await;
+let pp = api.protocol_parameters(Curve::Secp256k1).await?;
+```
+
+You typically don't need to call this; protocol parameters don't
+change between releases.

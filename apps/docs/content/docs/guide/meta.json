@@ -1,0 +1,17 @@
+{
+  "title": "Guide",
+  "description": "Quickstart, the signature flow, and core concepts.",
+  "icon": "BookOpen",
+  "root": true,
+  "pages": [
+    "index",
+    "---Getting started---",
+    "quickstart",
+    "your-first-signature",
+    "authentication",
+    "---Concepts---",
+    "dwallets",
+    "mpc",
+    "chains"
+  ]
+}

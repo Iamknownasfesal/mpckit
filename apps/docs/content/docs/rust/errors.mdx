@@ -1,0 +1,68 @@
+---
+title: Errors
+description: MpcKitError variants and how to match them.
+---
+
+The Rust crate mirrors the TypeScript SDK's error surface.
+
+```rust
+use mpckit::MpcKitError;
+
+match api.sign_submit(args).await {
+    Ok(res) => { /* … */ }
+    Err(MpcKitError::InsufficientCredits { body }) => {
+        // status 402, code "INSUFFICIENT_CREDITS". Top up.
+    }
+    Err(MpcKitError::Timeout { message }) => {
+        // polling exceeded the configured timeout. The request may
+        // still finish on the backend; reuse your idempotency key
+        // and call sign_submit again, or poll get_sign_request by
+        // a sign_request_id from a prior response.
+    }
+    Err(MpcKitError::Http { status, code, message, body }) => {
+        // any other typed API error
+    }
+    Err(MpcKitError::Transport(e)) => {
+        // network failure before the backend processed the request
+    }
+}
+```
+
+`Result<T> = std::result::Result<T, MpcKitError>` is re-exported from
+the crate root, so you can write `Result<Foo>` in your own code.
+
+## Variants
+
+| Variant                                   | When                                                                   |
+| ----------------------------------------- | ---------------------------------------------------------------------- |
+| `Http { status, code, message, body }`    | Backend returned a structured error.                                   |
+| `InsufficientCredits { body }`            | Status 402, code `INSUFFICIENT_CREDITS`. Top up.                       |
+| `Timeout { message }`                     | Polling exceeded the configured timeout.                               |
+| `Transport(reqwest::Error)`               | Network failure before the backend processed the request.              |
+| `Decode { .. }`                           | Backend returned a body the client couldn't decode (version mismatch). |
+| `InvalidArgument { .. }`                  | Builder or method received bad input (e.g. empty `base_url`).          |
+
+## Recovering from a sign timeout
+
+The simplest path is to reuse the idempotency key. The backend dedupes
+on it and returns the original sign session.
+
+```rust
+let key = mpckit::new_idempotency_key();
+
+let sig = match api.sign_submit(args.clone().with_idempotency(&key)).await {
+    Ok(s) => s,
+    Err(MpcKitError::Timeout { .. }) => {
+        // safe to retry with the same key
+        api.sign_submit(args.with_idempotency(&key)).await?
+    }
+    Err(e) => return Err(e.into()),
+};
+```
+
+## Surfacing in `anyhow` chains
+
+`MpcKitError` implements `std::error::Error`, so it composes with
+`anyhow::Error` and `?` out of any handler. The structured fields
+(`code`, `status`, etc.) survive into the `anyhow` chain via the
+`Display` impl.

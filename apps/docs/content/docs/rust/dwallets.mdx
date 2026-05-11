@@ -1,0 +1,52 @@
+---
+title: dWallets
+description: list_dwallets, get_dwallet, the DWallet type, and on-chain reads.
+---
+
+```rust
+let list = api.list_dwallets().await?;
+let detail = api.get_dwallet(&list.dwallets[0].id).await?;
+```
+
+## `DWallet`
+
+```rust
+pub struct DWallet {
+    pub id: String,
+    pub sui_dwallet_id: String,
+    pub curve: u32,
+    pub kind: DWalletKind,            // ZeroTrust | Shared
+    pub status: DWalletStatus,        // Submitting | AwaitingUserShare | Active | Failed
+    pub encryption_key_id: String,
+    pub dkg_tx_digest: Option<String>,
+    pub accept_tx_digest: Option<String>,
+    // ...
+}
+```
+
+Same fields as the TypeScript `DWallet`, with snake_case for Rust
+ergonomics. See [Concepts: dWallets](/docs/guide/dwallets) for the
+full mental model.
+
+## On-chain state
+
+```rust
+let state = api.dwallet_onchain_state(&dwallet_id).await?;
+```
+
+A direct read of the Sui object the dWallet record mirrors. Useful
+when you don't trust the backend cache (e.g. right after a write you
+haven't waited for) and want to confirm what's on chain.
+
+## Filtering
+
+```rust
+use mpckit::DWalletStatus;
+
+let list = api.list_dwallets().await?;
+let active: Vec<_> = list
+    .dwallets
+    .into_iter()
+    .filter(|d| matches!(d.status, DWalletStatus::Active))
+    .collect();
+```

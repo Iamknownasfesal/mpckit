@@ -1,0 +1,111 @@
+---
+title: Authentication
+description: API keys, the seed-driven identity model, and how the SDK persists what it must.
+---
+
+mpckit authentication has two layers. **API keys** authorize HTTP calls
+against a project's credit balance. **Seed-driven identity** binds a
+specific dWallet's user share. The SDK derives keys from a 32-byte
+seed you provide, and persists nothing for you.
+
+## API keys
+
+Every HTTP call to `api.mpckit.xyz` carries the bearer token in the
+`Authorization` header.
+
+```http
+GET /v1/health
+Authorization: Bearer mpckit_test_4f1a8c93…
+```
+
+Tokens are issued in the dashboard, scoped to one project, and rotate on
+demand. They authorize *what your project can do*; they do not on
+their own authorize signing for any particular dWallet.
+
+The SDK reads the key from `MpcKitOptions.apiKey`:
+
+```ts
+import { MpcKit } from "@mpckit/sdk";
+
+const api = new MpcKit({
+  baseUrl: "https://api.mpckit.xyz",
+  apiKey: process.env.MPCKIT_API_KEY!,
+  network: "testnet",
+});
+```
+
+<Callout type="warn" title="Server-side only">
+  `mpckit_test_` and `mpckit_live_` keys belong on a server. Don't ship them
+  to a browser. For browser/mobile signing, derive a per-user seed from
+  a passkey PRF or similar and call the SDK directly from your backend.
+</Callout>
+
+## Seed-driven identity
+
+The SDK takes a 32-byte seed (`Uint8Array`) on every `onboard` and
+`sign` call. The seed is yours; you choose how to source it:
+
+<TypeTable
+  type={{
+    "passkey PRF": {
+      description: "32 bytes returned by a WebAuthn PRF extension. Deterministic per credential.",
+      type: "Uint8Array(32)",
+    },
+    "env secret": {
+      description: "A long-lived secret stored in your environment, hashed to 32 bytes.",
+      type: "Uint8Array(32)",
+    },
+    "random per onboard": {
+      description: "Use `crypto.randomBytes(32)` and persist the seed alongside the dWallet.",
+      type: "Uint8Array(32)",
+    },
+  }}
+/>
+
+The seed deterministically produces the encryption keys used by DKG and
+signing. **Same seed + same dWallet = signing succeeds.** Different
+seeds cannot sign the same dWallet.
+
+## What you actually need to persist
+
+The **seed** is the only thing you must protect. Lose it and the
+dWallet is unrecoverable. Everything else is either on chain or
+derivable from the seed.
+
+```ts
+const result = await api.onboard({ seed, curve: Curve.SECP256K1 });
+
+// the dWallet id (public, fine to store anywhere):
+const dwalletId = result.dwallet.id;
+```
+
+### What lives where
+
+| Value                                     | Where it lives                              | Recoverable? |
+| ----------------------------------------- | ------------------------------------------- | ------------ |
+| `seed`                                    | Wherever you sourced it (passkey PRF, KMS…) | **No.**      |
+| `dwalletId`                               | On chain (Sui), mirrored in backend         | Yes          |
+| `EncryptedUserSecretKeyShare` (encrypted) | On chain (Sui)                              | Yes          |
+| `userSecretKeyShareHex` (plaintext)       | Optional cache in your storage              | Yes (rederive from seed + on-chain encrypted share) |
+| `userPublicOutputHex`                     | Optional cache; on chain too                | Yes          |
+
+`userSecretKeyShareHex` is the warm-path input `sign` expects, but
+it's recoverable. `UserShareEncryptionKeys.decryptUserShare` (in
+upstream `@ika.xyz/sdk`) derives the class-groups decryption key
+from your seed, reads the on-chain encrypted share, and recovers the
+plaintext. So persist the share alongside the dWallet to keep `sign`
+fast; if you lose the cache, recover it from chain + seed.
+
+If the cache leaks but the seed is safe, an attacker with the leaked
+share alone cannot sign — they also need a valid passkey assertion or
+project API key to reach the backend, and the network share is
+threshold-held by Ika validators. If the **seed** leaks, anyone with
+that seed plus a way to call `sign` can co-sign with the network.
+Treat the seed accordingly.
+
+## Token rotation
+
+Rotate API keys from the dashboard or via the HTTP API. Plan for
+overlap when you rotate: deploy the new key, switch traffic to it,
+then revoke the old one when you're confident nothing still references
+it.

@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "src",
+    "jsx": "react-jsx",
+    "types": ["react"],
+    "baseUrl": ".",
+    // sdk-react transitively touches the backend's App type via the
+    // EdenClient export from @mpckit/sdk/eden. tsc resolves the
+    // backend's `@/*` alias against *this* package's tsconfig, so we
+    // mirror it (sdk-react itself never uses `@/`).
+    "paths": {
+      "@/*": ["../../apps/backend/src/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

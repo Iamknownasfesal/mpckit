@@ -1,0 +1,224 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@source "./**/*.{ts,tsx}";
+@source "../components/**/*.{ts,tsx}";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(13% 0 0);
+  --foreground: oklch(98% 0 0);
+  --card: oklch(16% 0 0);
+  --card-foreground: oklch(98% 0 0);
+  --popover: oklch(17% 0 0);
+  --popover-foreground: oklch(98% 0 0);
+  --primary: oklch(82% 0.14 195);
+  --primary-foreground: oklch(14% 0.02 195);
+  --secondary: oklch(20% 0 0);
+  --secondary-foreground: oklch(96% 0 0);
+  --muted: oklch(19% 0 0);
+  --muted-foreground: oklch(62% 0 0);
+  --accent: oklch(22% 0 0);
+  --accent-foreground: oklch(98% 0 0);
+  --destructive: oklch(70% 0.18 25);
+  --destructive-foreground: oklch(98% 0 0);
+  --border: oklch(24% 0 0);
+  --input: oklch(24% 0 0);
+  --ring: oklch(82% 0.14 195);
+
+  --signal-live: oklch(72% 0.18 145);
+  --signal-warn: oklch(80% 0.16 75);
+  --signal-danger: oklch(70% 0.18 25);
+
+  --chart-1: oklch(82% 0.14 195);
+  --chart-2: oklch(80% 0.16 75);
+  --chart-3: oklch(72% 0.18 145);
+  --chart-4: oklch(74% 0.12 295);
+  --chart-5: oklch(70% 0.18 25);
+
+  --sidebar: oklch(11% 0 0);
+  --sidebar-foreground: oklch(94% 0 0);
+  --sidebar-primary: oklch(82% 0.14 195);
+  --sidebar-primary-foreground: oklch(14% 0.02 195);
+  --sidebar-accent: oklch(20% 0 0);
+  --sidebar-accent-foreground: oklch(98% 0 0);
+  --sidebar-border: oklch(20% 0 0);
+  --sidebar-ring: oklch(82% 0.14 195);
+}
+
+/* Mainnet tint. Subtly warms the background + sidebar so the operator
+ * sees, at a glance, that they're touching real value. The teal accent
+ * stays the same — only ambient surfaces shift. */
+html[data-network="mainnet"] {
+  --background: oklch(13% 0.01 70);
+  --card: oklch(16% 0.015 70);
+  --sidebar: oklch(11% 0.015 70);
+  --sidebar-accent: oklch(20% 0.02 70);
+  --border: oklch(26% 0.025 70);
+  --sidebar-border: oklch(22% 0.025 70);
+}
+
+/* Mainnet confirm CTA. Explicit hover/active so tailwind-merge can't
+ * strip the override against the default Button variant. */
+.mainnet-confirm:hover {
+  background-color: oklch(86% 0.18 75) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--signal-warn) 35%, transparent);
+}
+.mainnet-confirm:active {
+  background-color: oklch(74% 0.18 75) !important;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--signal-warn) 50%, transparent);
+}
+.mainnet-confirm:focus-visible {
+  --tw-ring-color: color-mix(in oklab, var(--signal-warn) 55%, transparent);
+}
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-signal-live: var(--signal-live);
+  --color-signal-warn: var(--signal-warn);
+  --color-signal-danger: var(--signal-danger);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+.t-mono {
+  font-family: var(--font-mono), ui-monospace, "SFMono-Regular", monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
+}
+
+.t-kicker {
+  font-family: var(--font-mono), ui-monospace, "SFMono-Regular", monospace;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.dot-ledger {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in oklab, var(--foreground) 14%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: 14px 14px;
+}
+
+.dot-ledger-fade {
+  -webkit-mask-image: radial-gradient(
+    ellipse 80% 70% at 50% 30%,
+    #000 0%,
+    transparent 90%
+  );
+  mask-image: radial-gradient(
+    ellipse 80% 70% at 50% 30%,
+    #000 0%,
+    transparent 90%
+  );
+}
+
+.hero-grain {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 220px 220px;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+}
+
+.tile-glow-teal {
+  background-image: radial-gradient(
+      ellipse 60% 60% at 100% 0%,
+      color-mix(in oklab, var(--primary) 22%, transparent),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 50% 50% at 0% 100%,
+      color-mix(in oklab, var(--primary) 14%, transparent),
+      transparent 65%
+    );
+}
+
+.tile-glow-amber {
+  background-image: radial-gradient(
+    ellipse 60% 60% at 0% 100%,
+    color-mix(in oklab, var(--signal-warn) 22%, transparent),
+    transparent 60%
+  );
+}
+
+.tile-glow-danger {
+  background-image: radial-gradient(
+    ellipse 70% 50% at 50% 0%,
+    color-mix(in oklab, var(--signal-danger) 16%, transparent),
+    transparent 60%
+  );
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+}
+
+.pulse-dot {
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}

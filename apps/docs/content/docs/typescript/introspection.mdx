@@ -1,0 +1,62 @@
+---
+title: Introspection
+description: Health, network info, and protocol public parameters.
+---
+
+Three reads that don't touch dWallet state:
+
+```ts
+import { Curve } from "@mpckit/sdk";
+
+await api.health();                              // { ok, service, uptime, now }
+await api.networkInfo();                         // NetworkInfo
+await api.protocolParameters(Curve.SECP256K1);   // Uint8Array (cached)
+```
+
+## `health()`
+
+A liveness check. Use it in your platform's healthcheck or
+post-deploy smoke test.
+
+```ts
+const h = await api.health();
+if (!h.ok) throw new Error(`mpckit unhealthy: ${h.service}`);
+```
+
+## `networkInfo()`
+
+Returns the operator's Sui address, the deployed ika package ids, the
+coordinator and system object ids, and the latest network encryption
+key.
+
+```ts
+const info = await api.networkInfo();
+console.log(info.operatorAddress);                // 0x… (Sui address)
+console.log(info.packages.ikaPackage);            // 0x…
+console.log(info.packages.ikaDwallet2pcMpcPackage); // 0x…
+console.log(info.objects.coordinator);            // 0x…
+console.log(info.objects.system);                 // 0x…
+console.log(info.latestEncryptionKey);            // { id, epoch, loadedAt }
+```
+
+The operator address is what binds the local DKG message to the
+backend's submitting account; the SDK already wires this up for you,
+but it's exposed here for diagnostics and self-hosted crypto engines.
+
+## `protocolParameters(curve)`
+
+The on-chain protocol public parameters for the given curve. Returned
+as `Uint8Array`. The backend pre-computes these at boot and serves
+them from an LRU cache, so going through `MpcKit` is dramatically
+faster than fetching the chunked table-vec from a Sui fullnode
+directly. The SDK also caches the result on the `MpcKit` instance
+until you call `invalidateProtocolParametersCache()`.
+
+```ts
+const pp = await api.protocolParameters(Curve.SECP256K1);
+console.log(pp.byteLength);
+```
+
+The parameters are an opaque payload to most consumers; the SDK uses
+them internally during DKG and signing. Pass them to a self-hosted
+crypto engine if you're driving the protocol by hand.

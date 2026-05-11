@@ -1,0 +1,47 @@
+---
+title: Rust SDK
+description: Async client for backend services. Same shapes as the TypeScript SDK.
+---
+
+The `mpckit` crate is the Rust client for the same HTTP surface
+`@mpckit/sdk` consumes. v1 covers introspection, billing, dWallet
+state, and the two-phase sign API as low-level methods. The high-level
+zero-trust DKG and centralized signature ceremonies require WASM-
+equivalent crypto; that lands in a future release behind a `crypto`
+feature once the upstream Rust crate is wired in.
+
+## At a glance
+
+```rust
+use mpckit::{MpcKit, Curve, Network};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let api = MpcKit::builder()
+        .base_url("https://api.mpckit.xyz")
+        .api_key(std::env::var("MPCKIT_API_KEY")?)
+        .network(Network::Testnet)
+        .build()?;
+
+    let health = api.health().await?;
+    println!("{} ok={}", health.service, health.ok);
+
+    let pp = api.protocol_parameters(Curve::Secp256k1).await?;
+    println!("{} bytes of public params", pp.len());
+    Ok(())
+}
+```
+
+## Where to go next
+
+<Cards>
+  <Card title="Setup" href="/docs/rust/setup" description="Cargo dependencies, builder, network selection." />
+  <Card title="Introspection" href="/docs/rust/introspection" description="health, network_info, protocol_parameters." />
+  <Card title="Billing" href="/docs/rust/billing" description="deposit, balance, pricing, declare, history." />
+  <Card title="dWallets" href="/docs/rust/dwallets" description="list_dwallets, get_dwallet, the DWallet type." />
+  <Card title="Low-level onboarding" href="/docs/rust/low-level-onboarding" description="Drive DKG step by step from your own crypto pipeline." />
+  <Card title="Low-level signing" href="/docs/rust/low-level-signing" description="The two-phase sign API: prepare, submit, poll." />
+  <Card title="High-level (crypto feature)" href="/docs/rust/high-level-crypto" description="onboard / sign once the crypto feature lands." />
+  <Card title="Errors" href="/docs/rust/errors" description="The MpcKitError variants and how to match them." />
+  <Card title="Utilities" href="/docs/rust/utilities" description="Idempotency keys and shared helpers." />
+</Cards>

@@ -1,0 +1,16 @@
+[package]
+name = "mpckit-example-rust-cli"
+description = "Minimal Rust SDK demo: onboard a zero-trust dwallet + sign a message."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "mpckit-cli"
+path = "src/main.rs"
+
+[dependencies]
+mpckit = { path = "../../packages/sdk-rust", features = ["crypto"] }
+hex.workspace = true
+tokio.workspace = true

@@ -1,0 +1,56 @@
+---
+title: Imperative escape hatches
+description: useMpcKit and useEdenClient. Drop down to the underlying clients when a hook isn't enough.
+---
+
+Most of the time the typed hooks are what you want. But sometimes you
+need the raw client (e.g. to call an endpoint that doesn't have a
+hook yet, batch many calls in a single effect, or pass the client to a
+non-React utility). Two hooks expose them.
+
+## `useMpcKit`
+
+Returns the `MpcKit` instance the provider constructed.
+
+```tsx
+import { useMpcKit } from "@mpckit/react";
+
+function ExportRows() {
+  const api = useMpcKit();
+
+  return (
+    <button
+      onClick={async () => {
+        const list = await api.listDWallets();
+        download("dwallets.json", JSON.stringify(list, null, 2));
+      }}
+    >
+      Export
+    </button>
+  );
+}
+```
+
+Mutating state through `api` directly bypasses TanStack Query, so it
+**will not** update any cached query. Pair imperative calls with
+manual invalidation when needed.
+
+## `useEdenClient`
+
+Returns the typed Eden Treaty client over the live OpenAPI surface.
+
+```tsx
+import { useEdenClient } from "@mpckit/react";
+
+function Custom() {
+  const eden = useEdenClient();
+
+  // every endpoint is typed against the backend OpenAPI spec
+  const { data } = await eden.v1.health.get();
+  return <pre>{JSON.stringify(data, null, 2)}</pre>;
+}
+```
+
+Use this for endpoints that haven't been promoted into typed `MpcKit`
+methods yet, or when you want full type-safety against the live API
+shape (request/response, params, errors).

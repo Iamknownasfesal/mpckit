@@ -1,0 +1,188 @@
+# Self-host stack: backend + dashboard + docs + gas-station + Postgres
+# + Redis. Boot on a single host with `docker compose up -d`.
+#
+# Operator must populate `.env` before running. See `.env.example` and
+# the self-hosting docs at https://docs.mpckit.xyz/docs/self-hosting.
+#
+# One gas-station daemon bound to ${IKA_NETWORK:-testnet}. For a
+# dual-network local stack, add a second gas-station service and point
+# SUI_GAS_STATION_MAINNET_URL at it (k8s does this in
+# infra/k8s/base/gas-station.yaml).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ika
+      POSTGRES_PASSWORD: ika
+      POSTGRES_DB: ika_api
+    # Loopback-only host bind so the backend can be run from the host
+    # (e.g. via `bun run dev`) without exposing the database to the
+    # network.
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ika -d ika_api"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  gas-station:
+    build:
+      context: infra/gas-station
+      dockerfile: Dockerfile
+      args:
+        GAS_POOL_REF: ${GAS_POOL_REF:-main}
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      GAS_STATION_AUTH: ${SUI_GAS_STATION_TESTNET_AUTH:?SUI_GAS_STATION_TESTNET_AUTH required}
+      SUI_GAS_STATION_SPONSOR_KEYPAIR_B64: ${SUI_GAS_STATION_SPONSOR_KEYPAIR_B64:?SUI_GAS_STATION_SPONSOR_KEYPAIR_B64 required}
+      SUI_GAS_STATION_FULLNODE_URL: ${SUI_GAS_STATION_FULLNODE_URL:-https://fullnode.testnet.sui.io:443}
+      SUI_GAS_STATION_REDIS_URL: ${SUI_GAS_STATION_REDIS_URL:-redis://redis:6379}
+      SUI_GAS_STATION_TARGET_BALANCE_MIST: ${SUI_GAS_STATION_TARGET_BALANCE_MIST:-500000000}
+    ports:
+      - "127.0.0.1:9527:9527"
+      - "127.0.0.1:9184:9184"
+
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/dwallet-labs/mpckit-backend:latest}
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: "3000"
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PROCESS_TYPE: ${PROCESS_TYPE:-both}
+
+      # Default network for anonymous endpoints. Must be one of the
+      # enabled networks below; backend picks the first enabled one if
+      # this is unset.
+      IKA_DEFAULT_NETWORK: ${IKA_DEFAULT_NETWORK:-testnet}
+
+      DATABASE_URL: postgres://ika:ika@postgres:5432/ika_api
+      REDIS_URL: redis://redis:6379
+
+      # Hot wallet (env provider for the simple compose path; prod uses
+      # aws-kms).
+      HOT_WALLET_PROVIDER: ${HOT_WALLET_PROVIDER:-env}
+      HOT_WALLET_SUI_SECRET_HEX: ${HOT_WALLET_SUI_SECRET_HEX:-}
+
+      # Per-network deployed Move package + caps + Treasury. A network
+      # is enabled when its MPCKITCORE_<NET>_PACKAGE_ID is set; leave
+      # the others blank to disable.
+      MPCKITCORE_TESTNET_PACKAGE_ID: ${MPCKITCORE_TESTNET_PACKAGE_ID:-}
+      MPCKITCORE_TESTNET_ADMIN_CAP_ID: ${MPCKITCORE_TESTNET_ADMIN_CAP_ID:-}
+      MPCKITCORE_TESTNET_OPERATOR_CAP_ID: ${MPCKITCORE_TESTNET_OPERATOR_CAP_ID:-}
+      MPCKITCORE_TESTNET_TREASURY_ID: ${MPCKITCORE_TESTNET_TREASURY_ID:-}
+      MPCKITCORE_MAINNET_PACKAGE_ID: ${MPCKITCORE_MAINNET_PACKAGE_ID:-}
+      MPCKITCORE_MAINNET_ADMIN_CAP_ID: ${MPCKITCORE_MAINNET_ADMIN_CAP_ID:-}
+      MPCKITCORE_MAINNET_OPERATOR_CAP_ID: ${MPCKITCORE_MAINNET_OPERATOR_CAP_ID:-}
+      MPCKITCORE_MAINNET_TREASURY_ID: ${MPCKITCORE_MAINNET_TREASURY_ID:-}
+
+      # Per-network Sui gRPC override; defaults to the Mysten public
+      # endpoint for each chain when unset.
+      SUI_GRPC_URL_TESTNET: ${SUI_GRPC_URL_TESTNET:-}
+      SUI_GRPC_URL_MAINNET: ${SUI_GRPC_URL_MAINNET:-}
+
+      ALLOW_SHARED_DWALLETS: ${ALLOW_SHARED_DWALLETS:-false}
+
+      # Per-network gas station. The compose stack ships one daemon
+      # bound to testnet by default; point _MAINNET_URL at a second
+      # daemon if you enable mainnet locally.
+      SUI_GAS_STATION_TESTNET_URL: ${SUI_GAS_STATION_TESTNET_URL:-http://gas-station:9527}
+      SUI_GAS_STATION_TESTNET_AUTH: ${SUI_GAS_STATION_TESTNET_AUTH:?SUI_GAS_STATION_TESTNET_AUTH required}
+      SUI_GAS_STATION_MAINNET_URL: ${SUI_GAS_STATION_MAINNET_URL:-}
+      SUI_GAS_STATION_MAINNET_AUTH: ${SUI_GAS_STATION_MAINNET_AUTH:-}
+      SUI_GAS_STATION_BUDGET_MIST: ${SUI_GAS_STATION_BUDGET_MIST:-500000000}
+      SUI_GAS_STATION_RESERVE_SECS: ${SUI_GAS_STATION_RESERVE_SECS:-30}
+
+      # Billing.
+      BILLING_DEPOSIT_MASTER_SEED_HEX: ${BILLING_DEPOSIT_MASTER_SEED_HEX:-}
+      BILLING_SWEEP_DESTINATION_ADDRESS: ${BILLING_SWEEP_DESTINATION_ADDRESS:-}
+      BILLING_ACCEPTED_COIN_TYPES: ${BILLING_ACCEPTED_COIN_TYPES:-0x2::sui::SUI}
+      BILLING_USD_PRICES: ${BILLING_USD_PRICES:-0x2::sui::SUI=1.0}
+      BILLING_COINGECKO_IDS: ${BILLING_COINGECKO_IDS:-0x2::sui::SUI=sui}
+      BILLING_PRICE_DKG_MICRO: ${BILLING_PRICE_DKG_MICRO:-50000}
+      BILLING_PRICE_SIGN_MICRO: ${BILLING_PRICE_SIGN_MICRO:-10000}
+      BILLING_PRICE_ENCRYPTION_KEY_MICRO: ${BILLING_PRICE_ENCRYPTION_KEY_MICRO:-1000}
+      BILLING_MIN_DEPOSIT_MICRO: ${BILLING_MIN_DEPOSIT_MICRO:-1000000}
+
+      ADMIN_API_KEY: ${ADMIN_API_KEY:?ADMIN_API_KEY required}
+      PRICING_SAFETY_MULTIPLIER: ${PRICING_SAFETY_MULTIPLIER:-1.5}
+
+      # Dashboard auth.
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      DASHBOARD_TRUSTED_ORIGINS: ${DASHBOARD_TRUSTED_ORIGINS:-http://localhost:3011}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  dashboard:
+    image: ${DASHBOARD_IMAGE:-ghcr.io/dwallet-labs/mpckit-dashboard:latest}
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+      args:
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:3000}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3011"
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:3000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3011:3011"
+
+  docs:
+    image: ${DOCS_IMAGE:-ghcr.io/dwallet-labs/mpckit-docs:latest}
+    build:
+      context: .
+      dockerfile: apps/docs/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3010"
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "127.0.0.1:3010:3010"
+
+volumes:
+  postgres_data:
+  redis_data:

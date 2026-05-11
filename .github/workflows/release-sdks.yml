@@ -1,0 +1,142 @@
+# Publish SDKs on tag push.
+#
+# Triggered by:
+#   - push to a tag matching v* (created by release-please when its
+#     release PR is squash-merged)
+#   - manual workflow_dispatch with a `dry_run` toggle so you can
+#     rehearse the publish without actually pushing to npm
+#
+# Auth: OIDC trusted publishing. No NPM_TOKEN secret is involved;
+# the GitHub OIDC token (issued by `id-token: write`) is exchanged
+# for a short-lived publish token via npm's trusted-publisher endpoint.
+#
+# Trusted publishing requires that each package already exists on npm
+# AND has a trusted publisher configured. Bootstrap step (one-time, on
+# first publish for each new package):
+#
+#   1. From a local clone with `npm login` against your @mpckit-owning
+#      account, run:
+#        cd packages/core      && bun run build && npm publish --provenance --access public
+#        cd packages/sdk-ts    && bun run build && npm publish --provenance --access public
+#        cd packages/sdk-react && bun run build && npm publish --provenance --access public
+#
+#   2. For each of @mpckit/core, @mpckit/sdk, @mpckit/react, open
+#      https://www.npmjs.com/package/<name>/access → "Trusted
+#      Publishers" → "Add a trusted publisher" → GitHub Actions:
+#        Owner: Iamknownasfesal
+#        Repository: mpckit
+#        Workflow filename: release-sdks.yml
+#        Environment: (leave empty)
+#
+#   3. All future tagged releases publish through this workflow via
+#      OIDC; no token to leak, no token to rotate.
+#
+# Scope: TypeScript packages only. The Rust crate (`packages/sdk-rust`)
+# can't go on crates.io yet because its `crypto` feature depends on
+# git-based forks (dwallet-mpc-centralized-party + a [patch.crates-io]
+# block for the RustCrypto pre-release pins). Until that's split into a
+# separate `mpckit-crypto` crate, consumers add the Rust SDK as a git
+# dep: `mpckit = { git = "https://github.com/Iamknownasfesal/mpckit" }`.
+#
+# Versioning is driven by release-please's manifest, so the tag drives
+# the version that gets published. There's no separate version bump
+# step here.
+
+name: release-sdks
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run all publish commands with --dry-run (no actual upload)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  # Required for both OIDC trusted publishing (exchanging the GitHub
+  # OIDC token for a short-lived npm publish token) AND provenance
+  # attestations (Sigstore signing of the published tarball).
+  id-token: write
+
+concurrency:
+  group: release-sdks-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ── Publish the three TypeScript packages to npm. Order matters:
+  # @mpckit/core has no @mpckit/* dep, @mpckit/sdk depends on core,
+  # @mpckit/react depends on sdk. We publish serially in dependency
+  # order so the npm registry's index is consistent for each install.
+  npm:
+    name: npm publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Upgrade npm to trusted-publishing capable release
+        # Pin to 11.5.1; `npm@latest` has periodically shipped broken
+        # tarballs (missing `promise-retry` etc). 11.5.1 is the minimum
+        # version with OIDC trusted-publisher support and resolves clean.
+        run: npm install -g npm@11.5.1
+
+      - name: Install workspace dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build all SDK packages
+        run: bun run build --filter='@mpckit/core' --filter='@mpckit/sdk' --filter='@mpckit/react'
+
+      - name: Verify package versions match the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GIT_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          expected="${GIT_TAG#v}"
+          for pkg in packages/core packages/sdk-ts packages/sdk-react; do
+            actual="$(jq -r .version "$pkg/package.json")"
+            if [[ "$actual" != "$expected" ]]; then
+              echo "::error::$pkg version is $actual but tag is $expected"
+              exit 1
+            fi
+            echo "$pkg @ $actual ✓"
+          done
+
+      - name: Publish @mpckit/core
+        working-directory: packages/core
+        run: |
+          if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+            npm publish --provenance --access public --dry-run
+          else
+            npm publish --provenance --access public
+          fi
+
+      - name: Publish @mpckit/sdk
+        working-directory: packages/sdk-ts
+        run: |
+          if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+            npm publish --provenance --access public --dry-run
+          else
+            npm publish --provenance --access public
+          fi
+
+      - name: Publish @mpckit/react
+        working-directory: packages/sdk-react
+        run: |
+          if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+            npm publish --provenance --access public --dry-run
+          else
+            npm publish --provenance --access public
+          fi

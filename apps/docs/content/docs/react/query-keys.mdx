@@ -1,0 +1,66 @@
+---
+title: Query keys
+description: Invalidate, refetch, or read cached data manually with mpcKitQueryKeys.
+---
+
+Every read hook stores its data under a stable key. The keys are
+exported so you can invalidate or read from the cache directly.
+
+```tsx
+import { mpcKitQueryKeys } from "@mpckit/react";
+import { useQueryClient } from "@tanstack/react-query";
+
+const qc = useQueryClient();
+
+// invalidate one
+qc.invalidateQueries({ queryKey: mpcKitQueryKeys.dwallet(dwalletId) });
+
+// invalidate all dWallet queries
+qc.invalidateQueries({ queryKey: mpcKitQueryKeys.dwallets() });
+```
+
+## All keys
+
+| Key                                       | Hook                |
+| ----------------------------------------- | ------------------- |
+| `mpcKitQueryKeys.networkInfo()`           | `useNetworkInfo`    |
+| `mpcKitQueryKeys.balance()`               | `useBalance`        |
+| `mpcKitQueryKeys.depositAddress()`        | `useDepositAddress` |
+| `mpcKitQueryKeys.pricing()`               | `usePricing`        |
+| `mpcKitQueryKeys.billingHistory()`        | `useBillingHistory` |
+| `mpcKitQueryKeys.dwallets()`              | `useDWallets`       |
+| `mpcKitQueryKeys.dwallet(id)`             | `useDWallet`        |
+
+## Reading from the cache
+
+```tsx
+const cached = qc.getQueryData(mpcKitQueryKeys.balance());
+```
+
+`cached` is `undefined` if the query has never run. Type the cast
+yourself; the keys themselves don't carry the result type.
+
+## Optimistic updates
+
+```tsx
+const sign = useSign();
+
+await qc.cancelQueries({ queryKey: mpcKitQueryKeys.balance() });
+const previous = qc.getQueryData(mpcKitQueryKeys.balance());
+
+qc.setQueryData(mpcKitQueryKeys.balance(), (old: any) => ({
+  ...old,
+  creditsMicro: old.creditsMicro - 120_000,
+}));
+
+try {
+  await sign.mutateAsync(args);
+  qc.invalidateQueries({ queryKey: mpcKitQueryKeys.balance() });
+} catch (e) {
+  qc.setQueryData(mpcKitQueryKeys.balance(), previous);
+  throw e;
+}
+```
+
+Optimistic updates work well for billing-side state since the cost of
+each op is known upfront from `usePricing()`.

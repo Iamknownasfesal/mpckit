@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard
+  namespace: mpckit
+spec:
+  selector:
+    app.kubernetes.io/name: dashboard
+  ports:
+    - name: http
+      port: 3011
+      targetPort: 3011
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: mpckit
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dashboard
+    spec:
+      imagePullSecrets:
+        - name: ghcr
+      containers:
+        - name: dashboard
+          image: ghcr.io/dwallet-labs/mpckit-dashboard:latest
+          ports:
+            - name: http
+              containerPort: 3011
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3011"
+            - name: HOSTNAME
+              value: 0.0.0.0
+            - name: NEXT_PUBLIC_BACKEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: mpckit-config
+                  key: NEXT_PUBLIC_BACKEND_URL
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi

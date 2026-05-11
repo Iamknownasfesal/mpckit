@@ -1,0 +1,124 @@
+---
+title: Onboarding
+description: api.onboard runs DKG end-to-end and returns the user share you must persist.
+---
+
+`onboard` runs distributed key generation end-to-end. It registers the
+encryption key, submits the on-chain DKG transaction, polls for
+`awaiting_user_share`, and finalizes by accepting the encrypted user
+share.
+
+```ts
+import { Curve } from "@mpckit/sdk";
+import { randomBytes } from "node:crypto";
+
+const seed = randomBytes(32);
+
+const result = await api.onboard({
+  seed,
+  curve: Curve.SECP256K1,
+  // optional
+  timeoutMs: 600_000, // 10 min default
+});
+```
+
+## `OnboardArgs`
+
+<TypeTable
+  type={{
+    seed: { description: "32-byte seed; deterministically drives the encryption keys.", type: "Uint8Array" },
+    curve: { description: "Curve the dWallet is provisioned for.", type: "Curve" },
+    timeoutMs: { description: "Polling timeout for AwaitingKeyHolderSignature.", type: "number", default: "600_000" },
+  }}
+/>
+
+## `OnboardResult`
+
+<TypeTable
+  type={{
+    dwallet: { description: "Backend record for the new dWallet.", type: "DWallet" },
+    encryptionKey: { description: "Backend record of the class-groups encryption key.", type: "EncryptionKey" },
+    encryptedUserSecretKeyShareId: { description: "Backend id of the encrypted user share.", type: "string" },
+    userSecretKeyShareHex: { description: "Plaintext user share bytes. Persist alongside the dWallet for the warm sign path; recoverable from seed + on-chain encrypted share if lost.", type: "string (hex)" },
+    userPublicOutputHex: { description: "Public DKG output. Persist for the warm path; also available on chain.", type: "string (hex)" },
+    txDigests: { description: "Sui digests for the onboard and accept transactions.", type: "{ onboard: string; accept: string }" },
+  }}
+/>
+
+## Keep the seed. Persist the share for the warm path.
+
+The **seed** is the only secret you must protect. Lose it and the
+dWallet is unrecoverable. The plaintext share is the warm-path input
+to `sign`, but it isn't a single point of failure: the encrypted
+share lives on chain, and the seed alone derives the class-groups
+decryption key needed to recover it.
+
+```ts
+// store alongside the dwallet for the warm sign path:
+await db.dwallets.insert({
+  id: result.dwallet.id,
+  curve: result.dwallet.curve,
+  userSecretKeyShareHex: result.userSecretKeyShareHex,
+  userPublicOutputHex: result.userPublicOutputHex,
+});
+```
+
+<Callout type="warn" title="The seed is the only critical secret">
+  `sign` expects `userSecretKeyShareHex` as input, so persist it for
+  the warm path. If you ever lose it, recover the plaintext from the
+  on-chain `EncryptedUserSecretKeyShare` plus the seed using
+  `UserShareEncryptionKeys.decryptUserShare` (upstream
+  `@ika.xyz/sdk`). If you drop the **seed**, the dWallet cannot be
+  signed by anyone again.
+</Callout>
+
+## Stages
+
+<Steps>
+
+<Step>
+
+### Encryption-key registration
+
+The SDK derives a class-groups encryption key from the seed and
+registers its public component via `POST /v1/encryption-keys`. This
+call is server-side idempotent on (user, curve), so retries are free.
+
+</Step>
+
+<Step>
+
+### DKG submission
+
+The SDK runs the local DKG prep (using protocol public parameters
+fetched from the backend's cached endpoint) and posts the result to
+`POST /v1/dwallets`. The backend submits the on-chain DKG transaction.
+
+</Step>
+
+<Step>
+
+### Polling
+
+The SDK reads on-chain state directly via the Sui fullnode (through
+`IkaClient.getDWalletInParticularState`) until the dWallet reaches
+the `AwaitingKeyHolderSignature` state. The on-chain object is the
+source of truth.
+
+</Step>
+
+<Step>
+
+### Accept
+
+The SDK signs the user public output and submits the accept call to
+`POST /v1/dwallets/:id/accept`. The dWallet transitions to `Active`.
+
+</Step>
+
+</Steps>
+
+<Cards>
+  <Card title="Signing" href="/docs/typescript/signing" description="Produce a signature with the share you just persisted." />
+  <Card title="dWallets" href="/docs/typescript/dwallets" description="The DWallet shape and lifecycle." />
+</Cards>

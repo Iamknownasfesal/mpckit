@@ -1,0 +1,98 @@
+---
+title: Docker Compose
+description: Bring up the full MpcKit stack on a single host with docker compose.
+---
+
+The repo ships a `docker-compose.yml` that boots backend, dashboard,
+docs, postgres, redis, and the gas station. Right for evaluation,
+single-box prod, and local development that mirrors production.
+
+## In 5 minutes
+
+```sh
+git clone https://github.com/dwallet-labs/mpckit
+cd mpckit
+cp .env.example .env
+# Fill in HOT_WALLET_SUI_SECRET_HEX, BILLING_DEPOSIT_MASTER_SEED_HEX,
+# SUI_GAS_STATION_SPONSOR_KEYPAIR_B64, MPCKITCORE_TESTNET_* (or _MAINNET_*),
+# ADMIN_API_KEY, BETTER_AUTH_SECRET at minimum.
+docker compose up -d
+curl http://localhost:3000/v1/health
+open http://localhost:3011  # dashboard
+open http://localhost:3010  # docs
+```
+
+The compose file brings up:
+
+- `postgres:16-alpine` for accounts, audit log, billing, presign pool.
+- `redis:7-alpine` for locks, idempotency, rate limits.
+- `gas-station` built from `infra/gas-station/Dockerfile`, exposing
+  `:9527` (HTTP) and `:9184` (Prometheus).
+- `backend` running both the HTTP server and the pg-boss worker
+  (`PROCESS_TYPE=both`).
+- `dashboard` on `:3011`.
+- `docs` on `:3010`.
+
+All host ports bind to `127.0.0.1` by default; front the box with a
+reverse proxy (Caddy, nginx, your cloud LB) that terminates TLS and
+proxies to the published ports.
+
+## Required configuration
+
+The minimum env block to boot a working testnet stack:
+
+```sh
+IKA_NETWORK=testnet
+HOT_WALLET_SUI_SECRET_HEX=<ed25519 secret hex of the protocol signer>
+
+# Output of `bun run apps/backend/scripts/deploy.ts` for the network.
+MPCKITCORE_TESTNET_PACKAGE_ID=0x…
+MPCKITCORE_TESTNET_ADMIN_CAP_ID=0x…
+MPCKITCORE_TESTNET_OPERATOR_CAP_ID=0x…
+MPCKITCORE_TESTNET_TREASURY_ID=0x…
+
+# Gas station sponsor (separate from the protocol signer).
+SUI_GAS_STATION_AUTH=<long random string>
+SUI_GAS_STATION_SPONSOR_KEYPAIR_B64=<flag||privkey base64>
+SUI_GAS_STATION_FULLNODE_URL=https://fullnode.testnet.sui.io:443
+
+# Billing.
+BILLING_DEPOSIT_MASTER_SEED_HEX=<32 bytes hex; derives per-user deposit addresses>
+BILLING_SWEEP_DESTINATION_ADDRESS=0x…  # where swept deposits land
+
+# Bootstrap admin + dashboard auth.
+ADMIN_API_KEY=<long random string>
+BETTER_AUTH_SECRET=<long random string>
+```
+
+See [Configuration](/docs/self-hosting/configuration) for the full
+reference.
+
+## Upgrades
+
+```sh
+git pull
+docker compose pull   # if you're pinning published images
+docker compose up -d --build
+```
+
+The backend container runs Drizzle migrations on boot; idempotent on
+re-runs.
+
+## Switching networks
+
+`docker-compose.yml` reads `IKA_NETWORK` from `.env` and the matching
+`MPCKITCORE_<NETWORK>_*` env block. To run both networks on one box
+side-by-side, copy the compose file and override the project name +
+ports:
+
+```sh
+# testnet stack
+docker compose -p mpckit-testnet up -d
+
+# mainnet stack with a second .env file + different ports
+COMPOSE_PROJECT_NAME=mpckit-mainnet docker compose --env-file .env.mainnet up -d
+```
+
+For real production, run on Kubernetes instead — see
+[Kubernetes](/docs/self-hosting/kubernetes).

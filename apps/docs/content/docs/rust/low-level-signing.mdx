@@ -1,0 +1,84 @@
+---
+title: Low-level signing
+description: "The two-phase sign API: prepare, submit, poll."
+---
+
+Without the `crypto` feature, `mpckit` exposes the on-chain signing
+flow as three direct methods. You drive the centralized signature
+math from your own crypto pipeline and feed bytes back to the backend.
+
+```rust
+let prepare = api.sign_prepare(/* args */).await?;
+let submit  = api.sign_submit(/* args */).await?;
+let req     = api.get_sign_request(&submit.sign_request_id).await?;
+```
+
+## Stages
+
+<Steps>
+
+<Step>
+
+### Prepare
+
+```rust
+let prepare = api.sign_prepare(SignPrepareArgs {
+    dwallet_id: dwallet_id.into(),
+    curve: Curve::Secp256k1,
+    signature_algorithm: SignatureAlgorithm::EcdsaSecp256k1,
+    hash_scheme: Hash::Sha256,
+}).await?;
+```
+
+The backend mints a presign (off-chain attestation) and returns the
+session id plus the bytes you need for the centralized math.
+
+</Step>
+
+<Step>
+
+### Submit
+
+```rust
+let submit = api.sign_submit(SignSubmitArgs {
+    sign_session_id: prepare.sign_session_id.clone(),
+    user_message_bytes: /* output of your centralized sign step */,
+    message: message.to_vec(),
+}).await?;
+```
+
+The backend submits the on-chain sign session and returns the
+`sign_request_id`.
+
+</Step>
+
+<Step>
+
+### Poll
+
+```rust
+use mpckit::SignRequestStatus;
+
+loop {
+    let req = api.get_sign_request(&submit.sign_request_id).await?;
+    match req.status {
+        SignRequestStatus::Completed => break req.signature.expect("signed"),
+        SignRequestStatus::Failed => return Err(/* surface error */),
+        _ => tokio::time::sleep(std::time::Duration::from_millis(500)).await,
+    }
+}
+```
+
+Once status is `Completed`, `req.signature` holds the raw signature
+bytes. Encoding to a chain-native format is your responsibility.
+
+</Step>
+
+</Steps>
+
+## Idempotency
+
+`SignSubmitArgs` accepts an `idempotency_key: Option<String>`. Pass a
+UUID-v7 (use [`new_idempotency_key()`](/docs/rust/utilities)) so a
+retried `sign_submit` returns the original `sign_request_id` instead
+of triggering a second on-chain session.

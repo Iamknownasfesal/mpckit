@@ -1,0 +1,129 @@
+import { accountRoutes } from "@/features/accounts/routes";
+import { betterAuthRoutes } from "@/features/auth/better-auth-routes";
+import { adminUserRoutes, userRoutes } from "@/features/auth/routes";
+import { billingRoutes } from "@/features/billing/routes";
+import { dwalletRoutes } from "@/features/dwallets/routes";
+import { encryptionKeyRoutes } from "@/features/encryption-keys/routes";
+import { healthRoutes } from "@/features/health/routes";
+import { metricsRoutes } from "@/features/metrics/routes";
+import { networkRoutes } from "@/features/network/routes";
+import { presignAdminRoutes } from "@/features/presigns/routes";
+import { pricingRoutes } from "@/features/pricing/routes";
+import { protocolParameterRoutes } from "@/features/protocol-parameters/routes";
+import { signRoutes } from "@/features/sign/routes";
+import { AuthError, authMiddleware } from "@/http/middleware/auth";
+import { rateLimitMiddleware } from "@/http/middleware/rate-limit";
+import { loggerFor, requestLogger } from "@/http/middleware/request-logger";
+import { AppError } from "@/shared/errors";
+import { swagger } from "@elysiajs/swagger";
+/**
+ * Elysia composition. Builds the HTTP app from feature route plugins;
+ * the API entrypoint (`src/api.ts`) calls `buildApp()` after the boot
+ * sequence (DB migrate, ika client warmup) finishes.
+ *
+ * Uniform error handling lives here: `AppError` becomes a clean
+ * `{error, code}` JSON with the carried status; everything else maps
+ * to a 500 with the message scrubbed for production.
+ *
+ * `App` is exported as a TypeScript type so the SDK + React bindings
+ * can consume it via `@elysiajs/eden` for end-to-end type safety
+ * without a code-gen step. The runtime never crosses the package
+ * boundary — only the inferred type does.
+ */
+import { Elysia } from "elysia";
+
+export function buildApp() {
+  // No CORS plugin: the dashboard reaches the backend via a Next.js
+  // rewrite (apps/dashboard/next.config.mjs) so requests are same-origin
+  // from the browser's perspective. SDK callers send Bearer tokens from
+  // their own servers and never run cross-origin. Re-add @elysiajs/cors
+  // only if a true browser-cross-origin SDK consumer shows up.
+  return (
+    new Elysia()
+      // First: intercept /api/auth/* and hand it off to Better-Auth
+      // before any other middleware can touch the request. Bearer auth,
+      // rate-limit, and request-logger don't fire for auth routes.
+      .use(betterAuthRoutes)
+      .use(requestLogger)
+      .use(authMiddleware)
+      .use(rateLimitMiddleware)
+      .use(
+        swagger({
+          path: "/docs",
+          documentation: {
+            info: {
+              title: "MpcKit API",
+              version: "0.0.0",
+              description:
+                "Hosted MpcKit dWallet gateway. SDKs talk to this surface; consult the Self-host guide for running your own tenant.",
+              license: {
+                name: "BSD-3-Clause",
+                url: "https://opensource.org/license/bsd-3-clause",
+              },
+            },
+            components: {
+              securitySchemes: {
+                bearer: {
+                  type: "http",
+                  scheme: "bearer",
+                  description:
+                    "API key issued by the operator. Format: `mpckit_live_…` or `mpckit_test_…` for test deploys.",
+                },
+              },
+            },
+            security: [{ bearer: [] }],
+            tags: [
+              {
+                name: "billing",
+                description: "USD-denominated credit ledger.",
+              },
+              {
+                name: "dwallets",
+                description: "Zero-trust dWallet lifecycle.",
+              },
+              { name: "sign", description: "Two-phase sign requests." },
+              {
+                name: "network",
+                description: "Live network + protocol metadata.",
+              },
+              { name: "admin", description: "Operator-only admin surface." },
+            ],
+          },
+        }),
+      )
+      .onError(({ error, code, set, request }) => {
+        if (error instanceof AppError) {
+          set.status = error.status;
+          return { error: error.message, code: error.code };
+        }
+        if (error instanceof AuthError) {
+          set.status = error.status;
+          return { error: error.message, code: error.code };
+        }
+        // Fall through: unexpected error.
+        loggerFor(request).error({ err: error, code }, "request error");
+        const status =
+          code === "VALIDATION" ? 400 : code === "NOT_FOUND" ? 404 : 500;
+        set.status = status;
+        return {
+          error: error instanceof Error ? error.message : "internal error",
+          code: typeof code === "string" ? code : "INTERNAL_ERROR",
+        };
+      })
+      .use(healthRoutes)
+      .use(networkRoutes)
+      .use(pricingRoutes)
+      .use(protocolParameterRoutes)
+      .use(userRoutes)
+      .use(adminUserRoutes)
+      .use(encryptionKeyRoutes)
+      .use(accountRoutes)
+      .use(billingRoutes)
+      .use(dwalletRoutes)
+      .use(signRoutes)
+      .use(presignAdminRoutes)
+      .use(metricsRoutes)
+  );
+}
+
+export type App = ReturnType<typeof buildApp>;

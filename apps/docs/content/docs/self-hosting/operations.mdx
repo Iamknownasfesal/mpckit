@@ -1,0 +1,138 @@
+---
+title: Operations
+description: Migrations, upgrades, observability, and routine ops for a running MpcKit instance.
+---
+
+## Migrations
+
+Drizzle migrations live in `apps/backend/migrations/` and run on
+backend container boot. They are idempotent and use an advisory lock,
+so it's safe to start multiple replicas simultaneously.
+
+To run migrations explicitly (e.g. before a deploy):
+
+```sh
+docker compose run --rm backend bun run db:migrate
+# or
+kubectl -n mpckit-testnet run migrate --rm -i --tty \
+  --image=ghcr.io/dwallet-labs/mpckit-backend:latest \
+  --restart=Never -- bun run db:migrate
+```
+
+## Upgrades
+
+```sh
+# docker compose
+git pull
+docker compose pull         # if you pin published images
+docker compose up -d --build
+
+# kubernetes
+kubectl set image deployment/backend backend=ghcr.io/dwallet-labs/mpckit-backend:v1.2.3 -n mpckit-testnet
+kubectl rollout status deployment/backend -n mpckit-testnet
+```
+
+## Versioning + releases
+
+Tags follow `v<major>.<minor>.<patch>` (semver). They're produced by
+[release-please](https://github.com/googleapis/release-please): every
+push to `main` updates a Release PR with the next computed version
+and an aggregated changelog. Merging the Release PR creates the tag
+and a matching GitHub Release; the `deploy.yml` workflow then builds
+images tagged with that version and rolls out to both testnet and
+mainnet.
+
+Commits must follow [Conventional
+Commits](https://www.conventionalcommits.org/) for release-please to
+detect bumps:
+
+| Prefix | Effect |
+|---|---|
+| `feat(scope): …` | minor bump (patch pre-1.0) |
+| `fix(scope): …` | patch bump |
+| `feat(scope)!: …` or `BREAKING CHANGE:` footer | major bump (minor pre-1.0) |
+| `chore`, `ci`, `test`, `docs`, `build` | no bump, hidden from changelog |
+| `perf`, `refactor`, `deps` | no bump, shown in changelog |
+
+A commit not matching any pattern is fine — it just doesn't contribute
+to the next version bump.
+
+The backend uses `@godaddy/terminus` for graceful shutdown. SIGTERM
+drains in-flight HTTP requests; pg-boss waits for handler callbacks to
+return. A rolling restart behind a load balancer doesn't drop traffic.
+
+## Health and metrics
+
+- `GET /v1/health` — process is up.
+- `GET /metrics` — Prometheus text format. Metric names prefixed
+  `mpckit_*`.
+- `GET /v1/admin/presigns/health?curve=0&signatureAlgorithm=1` —
+  per-bucket presign pool counts. Admin only.
+
+Scrape `/metrics` from a Prometheus instance and set
+`OTEL_EXPORTER_OTLP_ENDPOINT` for traces.
+
+## Refilling the presign pool
+
+The worker auto-refills any bucket whose `ready+pending` count drops
+below `PRESIGN_POOL_LOW_WATER`. To force a refill before an
+anticipated spike:
+
+```sh
+curl -X POST https://api.mpckit.xyz/v1/admin/presigns/refill \
+  -H "authorization: Bearer $ADMIN_API_KEY" \
+  -H "x-network: testnet" \
+  -H "content-type: application/json" \
+  -d '{"curve":0,"signatureAlgorithm":1,"count":20}'
+```
+
+## Backups
+
+What to back up:
+
+- **Postgres**: full DB dump. The DB is the source of truth for
+  accounts, API keys, billing ledger, audit log, and presign pool
+  state. Losing it means re-issuing keys and replaying deposits from
+  Sui chain history.
+- **Hot wallet secret**: if `HOT_WALLET_PROVIDER=env`, the
+  `HOT_WALLET_SUI_SECRET_HEX` is your protocol identity. Losing it
+  means losing the OperatorCap path (the cap is owned by this
+  address). Back it up out-of-band; rotating means re-deploying the
+  Move package.
+- **Gas-station sponsor**: same. Losing the sponsor keypair means
+  abandoning the gas coin pool on chain.
+- **`BILLING_DEPOSIT_MASTER_SEED_HEX`**: every per-user deposit
+  address is derived from this seed. Losing it orphans every existing
+  user's funded address.
+
+What does **not** need backup:
+
+- Redis: rebuilt by Postgres on next start. Locks/idempotency
+  keys/cache, all reconstructable.
+- Move package + Treasury object on chain: these are public chain
+  objects. The IDs in `MPCKITCORE_<NETWORK>_*` env are the only
+  references; record them somewhere durable, but the data itself
+  lives on Sui.
+
+## Networking
+
+- Backend listens on `:3000` by default. Front it with TLS.
+- Outbound: `:443` to your Sui fullnode RPC. Public defaults are
+  `fullnode.{testnet,mainnet}.sui.io:443`.
+- Outbound: `https://api.coingecko.com` for the price feed. Set
+  `BILLING_USD_PRICES` to a static map if you want to disable
+  outbound calls.
+- Postgres and Redis: never expose to the public internet.
+
+## Operator capabilities
+
+- `OperatorCap` (Sui object) — owns the ability to call `pay_*`
+  entries on the Treasury, which consume IKA + SUI to mint
+  dWallets/presigns/signs. The backend hot wallet must own this cap;
+  losing the wallet means losing the cap.
+- `AdminCap` — owns the ability to drain the Treasury and rotate
+  prices. Should be held by a separate keypair, ideally a multisig.
+  Not used by the running backend.
+
+The split mirrors the principle of least authority: the backend has
+exactly what it needs to pay protocol fees, no more.

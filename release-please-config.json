@@ -1,0 +1,54 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "mpckit",
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "Cargo.toml",
+          "jsonpath": "$.workspace.package.version"
+        }
+      ]
+    },
+    "packages/core": {
+      "release-type": "node",
+      "package-name": "@mpckit/core"
+    },
+    "packages/sdk-ts": {
+      "release-type": "node",
+      "package-name": "@mpckit/sdk"
+    },
+    "packages/sdk-react": {
+      "release-type": "node",
+      "package-name": "@mpckit/react"
+    }
+  },
+  "plugins": [
+    {
+      "type": "linked-versions",
+      "groupName": "mpckit",
+      "components": ["mpckit", "@mpckit/core", "@mpckit/sdk", "@mpckit/react"]
+    }
+  ],
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "draft": false,
+  "prerelease": false,
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "separate-pull-requests": false,
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "refactor", "section": "Refactors" },
+    { "type": "deps", "section": "Dependencies" },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "build", "section": "Build", "hidden": true },
+    { "type": "ci", "section": "CI", "hidden": true },
+    { "type": "test", "section": "Tests", "hidden": true },
+    { "type": "chore", "section": "Chores", "hidden": true }
+  ]
+}

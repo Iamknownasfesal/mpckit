@@ -1,0 +1,54 @@
+---
+title: Utilities
+description: Hex helpers, idempotency keys, session identifiers, and the raw HTTP escape hatch.
+---
+
+## Hex helpers
+
+```ts
+import { fromHex, toHex } from "@mpckit/sdk";
+
+const bytes = fromHex("0xdeadbeef");      // Uint8Array(4)
+const hex = toHex(new Uint8Array([1, 2])); // "0x0102"
+```
+
+Both helpers normalize the leading `0x`. `fromHex` accepts inputs with
+or without the prefix; `toHex` always emits one.
+
+## `newIdempotencyKey()`
+
+```ts
+import { newIdempotencyKey } from "@mpckit/sdk";
+
+const key = newIdempotencyKey(); // UUID-v7 string
+```
+
+Pass the result as `SignArgs.idempotencyKey` to make a sign call safe
+to retry. The backend de-duplicates calls keyed on it and returns the
+original signature on a retry.
+
+## `randomSessionIdentifier()`
+
+```ts
+import { randomSessionIdentifier } from "@mpckit/sdk";
+
+const sid = randomSessionIdentifier(); // 32-byte hex string
+```
+
+Used internally to mint protocol session ids. You only need this if
+you're driving the protocol by hand against the raw HTTP surface.
+
+## Raw HTTP escape hatch
+
+For endpoints not yet covered by typed methods:
+
+```ts
+const result = await api.raw.get<MyShape>("/v1/some/endpoint");
+const created = await api.raw.post<MyShape>("/v1/some/endpoint", {
+  body: { foo: "bar" },
+});
+```
+
+`api.raw` is the underlying typed HTTP client. It carries the same
+auth headers, timeouts, and retries `MpcKit` uses, so you don't need
+to reconstruct them.

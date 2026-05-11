@@ -1,0 +1,67 @@
+[workspace]
+resolver = "2"
+members = [
+    "packages/sdk-rust",
+    "examples/rust-cli",
+]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+license = "BSD-3-Clause"
+repository = "https://github.com/Iamknownasfesal/mpckit"
+
+[workspace.dependencies]
+base64 = "0.22"
+hex = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }
+url = "2"
+uuid = { version = "1", features = ["v4"] }
+wiremock = "0.6"
+
+# ── crypto feature deps (sdk-rust `crypto` feature only) ───────────────
+# Pinned to the same revs as dwallet-labs/ika so the inkrypto graph
+# resolves identically. Kept under workspace.dependencies even though
+# only sdk-rust uses them, so a future second crate can opt into the
+# same revs without drift.
+#
+# STATUS (2026-05-09): the `crypto` feature build does not currently
+# converge. Even with the full ika `[patch.crates-io]` block + the
+# RustCrypto pre-release pins below, cargo resolves an `ecdsa` /
+# `elliptic-curve` pair that fails to compile (`to_encoded_point` on
+# a `PublicKey` was renamed to `to_sec1_point` between rcs). Ika gets
+# around this via their `Cargo.lock` pinning the exact compatible
+# graph. Replicating that lock-level pinning here requires either
+# vendoring their lockfile or chasing each transitive crate one by
+# one. Track the unblock under task 211; the default (HTTP-only) build
+# is unaffected.
+dwallet-mpc-centralized-party = { git = "https://github.com/dwallet-labs/ika", branch = "main", package = "dwallet-mpc-centralized-party" }
+fastcrypto = { git = "https://github.com/MystenLabs/fastcrypto", rev = "4d2550a9833b3e686a94b823271e38063d309243" }
+
+# RustCrypto pre-release stack ika pins. Required for the inkrypto
+# dep graph: `crypto-bigint` is patched to a fork below, and the
+# pre-release k256/p256/curve25519-dalek/signature crates are the only
+# versions that line up with the patched `crypto-bigint::Choice`,
+# `subtle`, and `primefield` types. Without these explicit workspace
+# pins cargo resolves a mix of stable + pre-release that fails to
+# compile (`primefield` complains `crypto_bigint::Choice` vs
+# `subtle::Choice`).
+crypto-bigint = { version = "0.7.0-pre.9", default-features = false, features = ["serde"] }
+k256 = { version = "0.14.0-pre.11", default-features = false }
+p256 = { version = "0.14.0-pre.11", default-features = false }
+curve25519-dalek = { version = "5.0.0-pre.1", features = ["rand_core"] }
+signature = "3.0.0-rc.1"
+
+# ── patches required by the inkrypto graph ─────────────────────────────
+# Mandatory: inkrypto's crates depend on a forked `crypto-bigint` and a
+# pre-release `rfc6979` that aren't on crates.io. Without these patches
+# the centralized-party crate fails to compile. Same revs as
+# dwallet-labs/ika `[patch.crates-io]`. async-graphql patches are
+# omitted (only relevant to ika's GraphQL service, not us).
+[patch.crates-io]
+crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "8aabcee5" }
+rfc6979 = { git = "https://github.com/RustCrypto/signatures", tag = "rfc6979/v0.5.0-rc.1" }

@@ -1,0 +1,21 @@
+{
+  "title": "Rust",
+  "description": "mpckit crate. Async client for backends.",
+  "icon": "Cog",
+  "root": true,
+  "pages": [
+    "index",
+    "setup",
+    "---Reads---",
+    "introspection",
+    "billing",
+    "dwallets",
+    "---Protocol---",
+    "low-level-onboarding",
+    "low-level-signing",
+    "high-level-crypto",
+    "---Reference---",
+    "errors",
+    "utilities"
+  ]
+}

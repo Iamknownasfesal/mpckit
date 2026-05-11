@@ -1,0 +1,179 @@
+---
+title: Quickstart
+description: Sign your first message with @mpckit/sdk in five minutes.
+---
+
+This walks from a fresh API key to a signed message. ika runs on Sui
+mainnet using the 2PC-MPC protocol; the SDK accepts either `mainnet` or
+`testnet` so you can sandbox the integration before flipping the switch.
+The TypeScript SDK is a thin client over `api.mpckit.xyz`; everything below
+mirrors what the HTTP API does, with the DKG and centralized-signature
+crypto running locally inside `MpcKit`.
+
+<Steps>
+
+<Step>
+
+### Get an API key
+
+Open the dashboard, create a project, and issue a key. The key looks
+like `mpckit_test_…` on testnet and `mpckit_live_…` on mainnet. Treat it like
+a password. It authorizes calls against your project's credit balance.
+
+</Step>
+
+<Step>
+
+### Install the SDK
+
+<Tabs items={["bun", "pnpm", "npm", "yarn"]} groupId="pm" persist>
+
+<Tab value="bun">
+
+```bash
+bun add @mpckit/sdk
+```
+
+</Tab>
+
+<Tab value="pnpm">
+
+```bash
+pnpm add @mpckit/sdk
+```
+
+</Tab>
+
+<Tab value="npm">
+
+```bash
+npm install @mpckit/sdk
+```
+
+</Tab>
+
+<Tab value="yarn">
+
+```bash
+yarn add @mpckit/sdk
+```
+
+</Tab>
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Construct the client
+
+```ts title="ika.ts"
+import { MpcKit } from "@mpckit/sdk";
+
+export const api = new MpcKit({
+  baseUrl: "https://api.mpckit.xyz",
+  apiKey: process.env.MPCKIT_API_KEY!,
+  network: "testnet",
+});
+
+console.log(await api.health()); // { ok: true, service: "ika-api", … }
+```
+
+`MpcKit` is a single class with all methods on it. `network` is
+`"testnet"` or `"mainnet"`; the matching default Sui fullnode is used
+for on-chain reads unless you pass `suiRpcUrl`.
+
+</Step>
+
+<Step>
+
+### Fund the project
+
+Pricing is in microUSD (1 microUSD = $0.000001) and credits are funded
+by depositing accepted Sui-side coins.
+
+```ts
+const { address } = await api.depositAddress();
+// send accepted coin to `address` from any Sui wallet, then …
+
+await api.declareDeposit(txDigest);
+console.log(await api.balance()); // { creditsMicro, creditsUsd }
+```
+
+`api.billingPricing()` lists accepted coin types, op prices, and the
+live USD price feed.
+
+</Step>
+
+<Step>
+
+### Onboard a dWallet
+
+The high-level `onboard` runs distributed key generation end-to-end:
+it submits the on-chain DKG, polls for `awaiting_user_share`, and
+finalizes by accepting the encrypted user share.
+
+```ts title="onboard.ts"
+import { Curve } from "@mpckit/sdk";
+import { randomBytes } from "node:crypto";
+
+const seed = randomBytes(32); // 32 bytes; persist if you need to sign again
+
+const result = await api.onboard({
+  seed,
+  curve: Curve.SECP256K1,
+});
+
+// PERSIST these alongside the dwallet. They are not stored server-side:
+const dwalletId = result.dwallet.id;
+const userSecretKeyShareHex = result.userSecretKeyShareHex;
+```
+
+<Callout type="warn" title="Keep your seed. The share is recoverable.">
+  The **seed** is the only secret you must protect. Lose it and the
+  dWallet is unrecoverable. `userSecretKeyShareHex` is the warm-path
+  input to `sign`, but it isn't a single point of failure: the
+  encrypted share lives on chain, and the seed alone derives the
+  decryption key (via `UserShareEncryptionKeys.decryptUserShare` from
+  upstream `@ika.xyz/sdk`). Persist the share for the warm path; if
+  you ever lose it, you can rederive it from chain + seed.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Sign
+
+```ts title="sign.ts"
+import { Curve, Hash, SignatureAlgorithm } from "@mpckit/sdk";
+
+const message = new TextEncoder().encode("hello, ika");
+
+const sig = await api.sign({
+  seed,
+  dwalletId,
+  curve: Curve.SECP256K1,
+  signatureAlgorithm: SignatureAlgorithm.ECDSASecp256k1,
+  hashScheme: Hash.SHA256,
+  message,
+  userSecretKeyShareHex,
+});
+
+console.log(sig.signature); // Uint8Array
+console.log(sig.signRequestId, sig.txDigest);
+```
+
+The call drives a two-party MPC ceremony with the network share; the
+returned `Uint8Array` is the raw signature.
+
+</Step>
+
+</Steps>
+
+<Cards>
+  <Card title="Concepts: dWallets" href="/docs/guide/dwallets" />
+  <Card title="TypeScript SDK reference" href="/docs/typescript" />
+  <Card title="Curves and chains" href="/docs/guide/chains" />
+</Cards>

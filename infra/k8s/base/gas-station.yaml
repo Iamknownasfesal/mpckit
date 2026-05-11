@@ -1,0 +1,171 @@
+# sui-gas-station sponsors gas for every PTB the backend submits. The
+# daemon binds to one fullnode (one Sui network) per process, so each
+# enabled chain gets its own Deployment + Service. The sponsor keypair
+# is the same Ed25519 key on both chains (it derives the same address),
+# but the auth token is per-network so a leaked testnet token can never
+# drain the mainnet sponsor wallet.
+#
+# To disable a chain, scale its Deployment to 0; the backend will refuse
+# requests for that network with NETWORK_DISABLED.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gas-station-testnet
+  namespace: mpckit
+spec:
+  selector:
+    app.kubernetes.io/name: gas-station
+    mpckit.xyz/network: testnet
+  ports:
+    - name: http
+      port: 9527
+      targetPort: 9527
+    - name: metrics
+      port: 9184
+      targetPort: 9184
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gas-station-testnet
+  namespace: mpckit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gas-station
+      mpckit.xyz/network: testnet
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gas-station
+        mpckit.xyz/network: testnet
+    spec:
+      containers:
+        - name: gas-station
+          image: ghcr.io/iamknownasfesal/mpckit-gas-station:latest
+          ports:
+            - name: http
+              containerPort: 9527
+            - name: metrics
+              containerPort: 9184
+          env:
+            - name: GAS_STATION_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: mpckit-secrets
+                  key: SUI_GAS_STATION_TESTNET_AUTH
+            - name: SUI_GAS_STATION_SPONSOR_KEYPAIR_B64
+              valueFrom:
+                secretKeyRef:
+                  name: mpckit-secrets
+                  key: SUI_GAS_STATION_SPONSOR_KEYPAIR_B64
+            - name: SUI_GAS_STATION_REDIS_URL
+              value: redis://redis:6379/1
+            - name: SUI_GAS_STATION_FULLNODE_URL
+              value: "https://fullnode.testnet.sui.io:443"
+            - name: SUI_GAS_STATION_TARGET_BALANCE_MIST
+              value: "500000000"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gas-station-mainnet
+  namespace: mpckit
+spec:
+  selector:
+    app.kubernetes.io/name: gas-station
+    mpckit.xyz/network: mainnet
+  ports:
+    - name: http
+      port: 9527
+      targetPort: 9527
+    - name: metrics
+      port: 9184
+      targetPort: 9184
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gas-station-mainnet
+  namespace: mpckit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gas-station
+      mpckit.xyz/network: mainnet
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gas-station
+        mpckit.xyz/network: mainnet
+    spec:
+      containers:
+        - name: gas-station
+          image: ghcr.io/iamknownasfesal/mpckit-gas-station:latest
+          ports:
+            - name: http
+              containerPort: 9527
+            - name: metrics
+              containerPort: 9184
+          env:
+            - name: GAS_STATION_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: mpckit-secrets
+                  key: SUI_GAS_STATION_MAINNET_AUTH
+            - name: SUI_GAS_STATION_SPONSOR_KEYPAIR_B64
+              valueFrom:
+                secretKeyRef:
+                  name: mpckit-secrets
+                  key: SUI_GAS_STATION_SPONSOR_KEYPAIR_B64
+            - name: SUI_GAS_STATION_REDIS_URL
+              value: redis://redis:6379/2
+            - name: SUI_GAS_STATION_FULLNODE_URL
+              value: "https://fullnode.mainnet.sui.io:443"
+            - name: SUI_GAS_STATION_TARGET_BALANCE_MIST
+              value: "500000000"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi

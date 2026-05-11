@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": ".",
+    // `eden.ts` type-imports `App` from the backend, whose internals
+    // use the `@/*` alias. tsc resolves aliases against the *importing*
+    // package's tsconfig, so we mirror them here. sdk-ts itself never
+    // uses `@/`. `rootDir` would forbid the cross-package import, so
+    // it's intentionally absent.
+    "paths": {
+      "@/*": ["../../apps/backend/src/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

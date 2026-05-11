@@ -1,0 +1,50 @@
+---
+title: dWallets
+description: List, fetch, and inspect dWallets through the typed MpcKit surface.
+---
+
+```ts
+const list = await api.listDWallets();   // { dwallets: DWallet[] }
+const detail = await api.getDWallet(id); // { dwallet: DWallet }
+```
+
+Both calls are simple HTTP reads against the backend's mirror of Sui
+state.
+
+## `DWallet`
+
+<TypeTable
+  type={{
+    id: { description: "Backend record id (UUID).", type: "string" },
+    suiDwalletId: { description: "Sui object id of the on-chain dWallet record.", type: "string" },
+    curve: { description: "0=SECP256K1, 1=SECP256R1, 2=ED25519, 3=RISTRETTO.", type: "number" },
+    kind: { description: "How the user share is held.", type: "\"zero_trust\" | \"shared\"" },
+    status: { description: "Lifecycle stage.", type: "\"submitting\" | \"awaiting_user_share\" | \"active\" | \"failed\"" },
+    encryptionKeyId: { description: "Backend id of the class-groups encryption key used by DKG.", type: "string" },
+    dkgTxDigest: { description: "Sui tx digest of the on-chain DKG submission.", type: "string | null" },
+    acceptTxDigest: { description: "Sui tx digest of the user-share accept call.", type: "string | null" },
+  }}
+/>
+
+The Sui record at `suiDwalletId` is the source of truth. The backend
+row mirrors it for fast reads. See
+[Concepts: dWallets](/docs/guide/dwallets) for the deeper mental
+model.
+
+## Filtering by status
+
+```ts
+const list = await api.listDWallets();
+const ready = list.dwallets.filter((d) => d.status === "active");
+```
+
+## Bypassing the cache
+
+If you need to read on-chain state directly:
+
+```ts
+const onchain = await api.raw.get(`/v1/dwallets/${id}/onchain`);
+```
+
+The escape hatch is documented in
+[Utilities](/docs/typescript/utilities).

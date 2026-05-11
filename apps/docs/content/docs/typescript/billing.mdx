@@ -1,0 +1,73 @@
+---
+title: Billing
+description: Deposit, balance, pricing, declare, history. Everything that touches credits.
+---
+
+mpckit bills per op in microUSD (1 microUSD = $0.000001). Funds are
+deposited as Sui-side coins, declared to the backend, and converted to
+credits at the live USD rate.
+
+## Deposit address
+
+```ts
+const { address } = await api.depositAddress();
+```
+
+Send any accepted coin type (see `billingPricing().acceptedCoinTypes`)
+to that address from any Sui wallet.
+
+## Declare a deposit
+
+```ts
+await api.declareDeposit(txDigest);
+```
+
+The backend reads the on-chain transfer, converts it to microUSD at
+the live rate, and credits the project balance. Until you declare, the
+deposit doesn't show up in `balance()`.
+
+## Balance
+
+```ts
+const { creditsMicro, creditsUsd } = await api.balance();
+```
+
+`creditsMicro` and `creditsUsd` come from the same source. Pick
+whichever fits your UI; both update together.
+
+## Pricing
+
+```ts
+const pricing = await api.billingPricing();
+
+pricing.unit;            // "microUSD"
+pricing.microPerUsd;     // 1_000_000
+pricing.ops;             // Record<string, number>: microUSD per op
+pricing.opsUsd;          // Record<string, string>: same prices as USD strings
+pricing.acceptedCoinTypes;
+pricing.minDepositMicro; // smallest deposit the backend credits
+pricing.minDepositUsd;
+pricing.coinPricesUsd;
+pricing.priceFeed;       // { source, loadedAt, lastFeedSuccessAt, stale }
+```
+
+`pricing.ops` keys cover each op the backend charges for. At time of
+writing the keys are `encryption-key`, `dwallet.dkg`, and `sign`,
+with default rates of 1,000 / 50,000 / 10,000 microUSD respectively.
+Operators can override the defaults, so always read live values from
+`pricing.ops` rather than hardcoding.
+
+## History
+
+```ts
+const { deposits, charges } = await api.billingHistory();
+```
+
+Deposits include the original tx digest, declared time, and credited
+amount. Charges are the per-op rows that drained credits, indexed by
+the operation they paid for (`encryption-key`, `dwallet.dkg`, `sign`).
+
+<Cards>
+  <Card title="Curves and chains" href="/docs/guide/chains" description="Which ops apply to which chain you're signing for." />
+  <Card title="Errors" href="/docs/typescript/errors" description="Catch insufficient-credits errors before they reach your users." />
+</Cards>

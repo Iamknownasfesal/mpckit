@@ -1,0 +1,140 @@
+# End-to-end smoke against testnet.
+#
+# Brings up the full self-host stack (postgres + redis + gas-station +
+# backend) via docker-compose and runs `apps/backend/scripts/e2e-sdk.ts`
+# inside the backend container. The script exercises the happy path:
+# fund a deposit address, declare it, onboard a zero-trust dwallet,
+# sign a message.
+#
+# Trigger:
+#   - `workflow_dispatch` for manual runs.
+#   - The nightly `schedule` is commented out below; flip it on once
+#     the workflow has a few green runs to its name.
+#
+# Required repository secrets (Settings -> Secrets -> Actions):
+#
+#   ── operator (backend) ──
+#   HOT_WALLET_SUI_SECRET_HEX            32-byte ed25519 seed (hex) for
+#                                        the operator hot wallet.
+#                                        Address must hold IKA + SUI.
+#   IKA_API_PACKAGE_ID                   from `bun run scripts/deploy.ts`.
+#   IKA_API_ADMIN_CAP_ID                  Names retain the `IKA_API_` prefix
+#   IKA_API_OPERATOR_CAP_ID               because they reference the on-chain
+#   IKA_API_TREASURY_ID                   `ika_api` Move package, not the brand.
+#   BILLING_DEPOSIT_MASTER_SEED_HEX      32-byte master seed for HD
+#                                        deposit address derivation
+#   BILLING_SWEEP_DESTINATION_ADDRESS    where billing sweeps drain to
+#   ADMIN_API_KEY                        bootstrap admin key
+#                                        (e.g. `mpckit_admin_<random>`)
+#
+#   ── gas-station ──
+#   SUI_GAS_STATION_AUTH                 bearer token
+#   SUI_GAS_STATION_SPONSOR_KEYPAIR_B64  base64 SuiKeyPair, address must
+#                                        hold SUI for gas
+#
+#   ── e2e funder ──
+#   E2E_FUNDER_KEYPAIR_BECH32            bech32 (`suiprivkey…`) for the
+#                                        wallet that funds the e2e
+#                                        user's deposit address
+name: e2e
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: "0 6 * * *" # daily 06:00 UTC
+
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+jobs:
+  testnet:
+    name: testnet smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      IKA_NETWORK: testnet
+      COMPOSE_FILE: docker-compose.yml
+
+      # secrets piped through to compose
+      HOT_WALLET_SUI_SECRET_HEX: ${{ secrets.HOT_WALLET_SUI_SECRET_HEX }}
+      IKA_API_PACKAGE_ID: ${{ secrets.IKA_API_PACKAGE_ID }}
+      IKA_API_ADMIN_CAP_ID: ${{ secrets.IKA_API_ADMIN_CAP_ID }}
+      IKA_API_OPERATOR_CAP_ID: ${{ secrets.IKA_API_OPERATOR_CAP_ID }}
+      IKA_API_TREASURY_ID: ${{ secrets.IKA_API_TREASURY_ID }}
+      BILLING_DEPOSIT_MASTER_SEED_HEX: ${{ secrets.BILLING_DEPOSIT_MASTER_SEED_HEX }}
+      BILLING_SWEEP_DESTINATION_ADDRESS: ${{ secrets.BILLING_SWEEP_DESTINATION_ADDRESS }}
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      SUI_GAS_STATION_AUTH: ${{ secrets.SUI_GAS_STATION_AUTH }}
+      SUI_GAS_STATION_SPONSOR_KEYPAIR_B64: ${{ secrets.SUI_GAS_STATION_SPONSOR_KEYPAIR_B64 }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: assert required secrets
+        run: |
+          missing=0
+          for v in HOT_WALLET_SUI_SECRET_HEX IKA_API_PACKAGE_ID \
+                   IKA_API_ADMIN_CAP_ID IKA_API_OPERATOR_CAP_ID \
+                   IKA_API_TREASURY_ID BILLING_DEPOSIT_MASTER_SEED_HEX \
+                   BILLING_SWEEP_DESTINATION_ADDRESS ADMIN_API_KEY \
+                   SUI_GAS_STATION_AUTH SUI_GAS_STATION_SPONSOR_KEYPAIR_B64; do
+            if [ -z "${!v}" ]; then
+              echo "::error::secret $v is empty"
+              missing=$((missing + 1))
+            fi
+          done
+          if [ -z "${{ secrets.E2E_FUNDER_KEYPAIR_BECH32 }}" ]; then
+            echo "::error::secret E2E_FUNDER_KEYPAIR_BECH32 is empty"
+            missing=$((missing + 1))
+          fi
+          [ $missing -eq 0 ]
+
+      - name: bring up stack
+        run: docker compose up -d --build
+
+      - name: wait for backend health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/v1/health >/dev/null 2>&1; then
+              echo "backend healthy after ${i}s"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::backend failed to become healthy"
+          docker compose ps
+          docker compose logs --tail=200
+          exit 1
+
+      - name: run e2e-sdk
+        env:
+          E2E_FUNDER_KEYPAIR_BECH32: ${{ secrets.E2E_FUNDER_KEYPAIR_BECH32 }}
+        run: |
+          docker compose exec -T \
+            -e ADMIN_API_KEY="$ADMIN_API_KEY" \
+            -e IKA_NETWORK=testnet \
+            -e BACKEND_URL=http://localhost:3000 \
+            -e E2E_FUNDER_KEYPAIR_BECH32="$E2E_FUNDER_KEYPAIR_BECH32" \
+            -e E2E_USER_SEED_HEX="$(openssl rand -hex 32)" \
+            backend bun run apps/backend/scripts/e2e-sdk.ts
+
+      - name: dump logs on failure
+        if: failure()
+        run: |
+          echo "::group::backend"
+          docker compose logs --tail=500 backend || true
+          echo "::endgroup::"
+          echo "::group::gas-station"
+          docker compose logs --tail=200 gas-station || true
+          echo "::endgroup::"
+          echo "::group::postgres"
+          docker compose logs --tail=100 postgres || true
+          echo "::endgroup::"
+          echo "::group::redis"
+          docker compose logs --tail=100 redis || true
+          echo "::endgroup::"
+
+      - name: tear down
+        if: always()
+        run: docker compose down -v
