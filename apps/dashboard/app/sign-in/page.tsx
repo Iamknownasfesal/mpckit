@@ -172,7 +172,7 @@ export default function SignInPage() {
                 </span>
               </div>
               <StatusPill tone="live" pulse>
-                Live on Sui testnet
+                Live on Sui testnet + mainnet
               </StatusPill>
               <h2 className="text-balance text-[40px] font-semibold leading-[0.98] tracking-[-0.035em] xl:text-[52px]">
                 Sign on every chain.

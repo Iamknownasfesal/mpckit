@@ -156,7 +156,7 @@ export default function OpenGraphImage() {
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
             }}
           >
-            Hosted MPC · Live on Sui mainnet
+            Hosted MPC · Live on Sui testnet + mainnet
           </span>
           <span
             style={{

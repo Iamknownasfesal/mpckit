@@ -89,8 +89,8 @@ export default function OverviewPage() {
         title={<>Welcome back, {firstName}.</>}
         description={
           <>
-            Your signing service at a glance. All numbers update against the
-            live Sui testnet.
+            Your signing service at a glance. All numbers update against your
+            selected Sui network.
           </>
         }
         right={
