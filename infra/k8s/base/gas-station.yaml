@@ -46,7 +46,7 @@ spec:
     spec:
       containers:
         - name: gas-station
-          image: ghcr.io/dwallet-labs/mpckit-gas-station:latest
+          image: ghcr.io/iamknownasfesal/mpckit-gas-station:latest
           ports:
             - name: http
               containerPort: 9527
@@ -127,7 +127,7 @@ spec:
     spec:
       containers:
         - name: gas-station
-          image: ghcr.io/dwallet-labs/mpckit-gas-station:latest
+          image: ghcr.io/iamknownasfesal/mpckit-gas-station:latest
           ports:
             - name: http
               containerPort: 9527
