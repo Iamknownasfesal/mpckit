@@ -84,11 +84,17 @@ spec:
             preStop:
               exec:
                 command: ["sleep", "5"]
+          # Memory budget: the boot warmup loads one IkaClient + WASM
+          # protocol-parameter cache per enabled network, so the
+          # footprint scales linearly with how many of {testnet, mainnet}
+          # are configured. 2Gi was tight for one network; both-on
+          # pushes peak past 2Gi during warmup. 3Gi gives comfortable
+          # headroom — observed steady-state is ~700 MiB.
           resources:
             requests:
               cpu: 200m
-              memory: 512Mi
+              memory: 768Mi
             limits:
               cpu: 2000m
-              memory: 2Gi
+              memory: 3Gi
       terminationGracePeriodSeconds: 60
