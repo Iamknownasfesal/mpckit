@@ -26,4 +26,4 @@ images:
     newTag: latest
 
 commonLabels:
-  app.kubernetes.io/instance: prod
+  app.kubernetes.io/instance: testnet
