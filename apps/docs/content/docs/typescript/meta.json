@@ -1,0 +1,21 @@
+{
+  "title": "TypeScript",
+  "description": "@mpckit/sdk. The MpcKit class, every method.",
+  "icon": "FileCode",
+  "root": true,
+  "pages": [
+    "index",
+    "setup",
+    "---Core flows---",
+    "onboarding",
+    "signing",
+    "dwallets",
+    "---Project---",
+    "billing",
+    "introspection",
+    "---Advanced---",
+    "crypto-engines",
+    "errors",
+    "utilities"
+  ]
+}

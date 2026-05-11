@@ -1,0 +1,56 @@
+---
+title: Billing
+description: Deposit address, balance, pricing, declare, history.
+---
+
+```rust
+api.deposit_address().await?;     // DepositAddress { address }
+api.balance().await?;             // Balance { credits_micro, credits_usd }
+api.billing_pricing().await?;     // BillingPricing
+api.declare_deposit("5xK…").await?;
+api.billing_history().await?;     // BillingHistory { deposits, charges }
+```
+
+## `BillingPricing`
+
+Mirrors the TypeScript shape:
+
+```rust
+pub struct BillingPricing {
+    pub unit: String,                          // "microUSD"
+    pub micro_per_usd: u64,                    // 1_000_000
+    pub ops: HashMap<String, u64>,             // microUSD per op
+    pub ops_usd: HashMap<String, String>,      // same prices as USD strings
+    pub accepted_coin_types: Vec<String>,
+    pub min_deposit_micro: u64,
+    pub min_deposit_usd: String,
+    pub coin_prices_usd: HashMap<String, String>,
+    pub price_feed: PriceFeed,
+}
+
+pub struct PriceFeed {
+    pub source: String,           // "feed" | "fallback" | "mixed"
+    pub loaded_at: u64,
+    pub last_feed_success_at: u64,
+    pub stale: bool,
+}
+```
+
+`ops` keys are the ops the backend charges for. At time of writing:
+`"encryption-key"`, `"dwallet.dkg"`, and `"sign"`, with default rates
+of 1,000 / 50,000 / 10,000 microUSD. Operators can change those
+defaults, so read live values from `pricing.ops` rather than
+hardcoding.
+
+## Topping up
+
+```rust
+let addr = api.deposit_address().await?;
+// send accepted coin to addr.address from any Sui wallet, then:
+api.declare_deposit(&tx_digest).await?;
+let bal = api.balance().await?;
+println!("credits: ${}", bal.credits_usd);
+```
+
+`declare_deposit` is idempotent per tx digest. Calling it twice for
+the same digest is safe and returns the same credited amount.

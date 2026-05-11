@@ -1,0 +1,15 @@
+{
+  "name": "@mpckit/example-ts-browser",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@mpckit/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

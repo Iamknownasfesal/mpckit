@@ -1,0 +1,83 @@
+---
+title: Setup
+description: Install @mpckit/sdk, construct MpcKit, and tune options.
+---
+
+## Install
+
+<Tabs items={["bun", "pnpm", "npm", "yarn"]} groupId="pm" persist>
+
+<Tab value="bun">
+
+```bash
+bun add @mpckit/sdk
+```
+
+</Tab>
+
+<Tab value="pnpm">
+
+```bash
+pnpm add @mpckit/sdk
+```
+
+</Tab>
+
+<Tab value="npm">
+
+```bash
+npm install @mpckit/sdk
+```
+
+</Tab>
+
+<Tab value="yarn">
+
+```bash
+yarn add @mpckit/sdk
+```
+
+</Tab>
+
+</Tabs>
+
+## Construct
+
+```ts
+import { MpcKit } from "@mpckit/sdk";
+
+const api = new MpcKit({
+  baseUrl: "https://api.mpckit.xyz",
+  apiKey: process.env.MPCKIT_API_KEY!,
+  network: "testnet",
+});
+```
+
+## `MpcKitOptions`
+
+<TypeTable
+  type={{
+    baseUrl: { description: "Backend base URL, no trailing slash.", type: "string" },
+    apiKey: { description: "Bearer token issued by the backend.", type: "string" },
+    network: { description: "Sui network the backend is configured against.", type: "\"mainnet\" | \"testnet\"" },
+    suiRpcUrl: { description: "Override the Sui fullnode used for on-chain reads.", type: "string", default: "Mysten public fullnode for the network" },
+    crypto: { description: "Override the crypto engine.", type: "CryptoEngine", default: "InlineCryptoEngine" },
+    fetch: { description: "Custom fetch (test injection, retry).", type: "typeof fetch" },
+    timeoutMs: { description: "Per-request HTTP timeout in milliseconds.", type: "number", default: "30_000" },
+  }}
+/>
+
+## Smoke test
+
+```ts
+const health = await api.health();
+console.log(health); // { ok: true, service: "ika-api", uptime, now }
+```
+
+If `health.ok` is `true` you have a working client. Now you can fund
+the project and onboard a dWallet.
+
+<Cards>
+  <Card title="Onboarding" href="/docs/typescript/onboarding" description="Run DKG end-to-end with api.onboard." />
+  <Card title="Billing" href="/docs/typescript/billing" description="Top up credits before onboard." />
+</Cards>

@@ -1,0 +1,77 @@
+# Ingress assumes the nginx-ingress controller and cert-manager.
+# Overlays patch the hostnames per environment.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mpckit
+  namespace: mpckit
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.mpckit.xyz
+        - app.mpckit.xyz
+        - docs.mpckit.xyz
+        - mpckit.xyz
+        - www.mpckit.xyz
+      secretName: mpckit-tls
+  rules:
+    - host: api.mpckit.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  name: http
+    - host: app.mpckit.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dashboard
+                port:
+                  name: http
+    # docs.mpckit.xyz, mpckit.xyz, and www.mpckit.xyz all hit the same
+    # `docs` Deployment. apps/docs/middleware.ts pivots on the Host
+    # header: docs.* rewrites `/` → `/docs`, apex 308-redirects
+    # `/docs/...` → docs.*. nginx-ingress preserves the original Host
+    # by default, which is what the middleware reads.
+    - host: docs.mpckit.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: docs
+                port:
+                  name: http
+    - host: mpckit.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: docs
+                port:
+                  name: http
+    - host: www.mpckit.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: docs
+                port:
+                  name: http

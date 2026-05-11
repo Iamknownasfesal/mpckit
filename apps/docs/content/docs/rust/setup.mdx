@@ -1,0 +1,65 @@
+---
+title: Setup
+description: Add the crate, build the client, pick a network.
+---
+
+## Install
+
+```toml title="Cargo.toml"
+[dependencies]
+mpckit = "0.1"
+tokio = { version = "1", features = ["full"] }
+```
+
+The crate uses `reqwest`. If you already depend on `reqwest` with
+`rustls`, that's compatible; `mpckit` uses rustls by default. The
+`crypto` feature is gated and requires the upstream ika crypto crate
+to be available; check the crate README for current feature flags.
+
+## Build the client
+
+```rust title="main.rs"
+use mpckit::{MpcKit, Network};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let api = MpcKit::builder()
+        .base_url("https://api.mpckit.xyz")
+        .api_key(std::env::var("MPCKIT_API_KEY")?)
+        .network(Network::Testnet)
+        .build()?;
+
+    let health = api.health().await?;
+    println!("{} ok={}", health.service, health.ok);
+    Ok(())
+}
+```
+
+## Builder options
+
+| Method                         | Required | Default                                   |
+| ------------------------------ | -------- | ----------------------------------------- |
+| `.base_url(impl Into<String>)` | yes      | n/a                                       |
+| `.api_key(impl Into<String>)`  | yes      | n/a                                       |
+| `.network(Network)`            | yes      | n/a                                       |
+| `.timeout(Duration)`           | no       | 30s                                       |
+| `.sui_rpc_url(...)`            | no       | Mysten public fullnode for the network    |
+| `.user_agent(...)`             | no       | `mpckit-rust/<crate-version>`             |
+
+`Network` is `Network::Testnet | Network::Mainnet`.
+
+## Sharing the client
+
+`MpcKit` is `Clone` and internally uses an `Arc`-shared `reqwest::Client`,
+so the recommended pattern is to build once at startup and `clone()` for
+each spawned task or handler:
+
+```rust
+let api = MpcKit::builder()/* ... */.build()?;
+
+// in axum/actix/tower handlers
+let api = api.clone();
+tokio::spawn(async move {
+    api.balance().await
+});
+```

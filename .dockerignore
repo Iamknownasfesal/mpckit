@@ -1,0 +1,48 @@
+# Source control + IDE
+.git
+.github
+.vscode
+.idea
+*.swp
+
+# Workspace artifacts that should never bake into an image.
+node_modules
+**/node_modules
+.turbo
+**/.turbo
+dist
+**/dist
+build
+**/build
+.next
+**/.next
+target
+**/target
+Cargo.lock
+*.log
+.DS_Store
+
+# Local env. Real env comes from the orchestrator.
+.env
+.env.*
+!.env.example
+
+# Sui CLI state (deploy.ts touches ~/.move). Not relevant in the image.
+.move
+**/.move
+
+# Test outputs
+coverage
+**/coverage
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Editors/temp
+.cache
+.swc
+.parcel-cache
+**/.parcel-cache
+
+# Per-app: docker images bake their own sources via explicit COPYs in
+# each Dockerfile, so cross-app source is dropped here for hygiene.
+# The runtime stage explicitly copies only what it needs.

@@ -1,0 +1,123 @@
+---
+title: Kubernetes
+description: Deploy MpcKit to Kubernetes with Kustomize overlays per network.
+---
+
+The repo ships Kustomize manifests under `infra/k8s/` with a `base/`
+that defines every Deployment, Service, and Ingress, and per-network
+overlays under `overlays/testnet/` and `overlays/mainnet/`. CI builds
+and pushes container images to `ghcr.io/dwallet-labs/mpckit-{backend,dashboard,docs}`;
+deploys apply the overlay against your cluster.
+
+## Cluster prerequisites
+
+- Kubernetes 1.28+.
+- An ingress controller. The manifests assume `ingressClassName:
+  nginx` and `cert-manager` for TLS. Swap to your controller in the
+  overlays.
+- Storage class for postgres + redis volumes. The base manifests use
+  whatever the cluster's default is.
+
+For real production, terminate Postgres and Redis externally
+(managed Postgres, managed Redis) and remove the in-cluster
+StatefulSets from the overlay. The base ships in-cluster so the
+manifests are runnable as-is for evaluation.
+
+## Layout
+
+```
+infra/k8s/
+  base/
+    backend.yaml          # api + worker (PROCESS_TYPE=both)
+    dashboard.yaml
+    docs.yaml
+    postgres.yaml
+    redis.yaml
+    gas-station.yaml
+    ingress.yaml
+    kustomization.yaml
+  overlays/
+    testnet/
+      kustomization.yaml  # IKA_NETWORK=testnet + testnet image tag
+      env.yaml            # ConfigMap with non-secret env
+      secrets.example.yaml
+    mainnet/
+      ...
+```
+
+## Bring it up
+
+```sh
+# 1. Create the namespace and pull-secret for ghcr.io.
+kubectl create ns mpckit-testnet
+kubectl -n mpckit-testnet create secret docker-registry ghcr \
+  --docker-server=ghcr.io \
+  --docker-username=<gh-user> \
+  --docker-password=<gh-token>
+
+# 2. Populate the secret. Copy the example, fill in real values, apply.
+cp infra/k8s/overlays/testnet/secrets.example.yaml /tmp/mpckit-secrets.yaml
+$EDITOR /tmp/mpckit-secrets.yaml
+kubectl -n mpckit-testnet apply -f /tmp/mpckit-secrets.yaml
+rm /tmp/mpckit-secrets.yaml
+
+# 3. Apply the overlay.
+kubectl apply -k infra/k8s/overlays/testnet
+```
+
+## Per-network deployments
+
+Each overlay produces an isolated stack. Run testnet and mainnet in
+separate namespaces, each with their own image tags, secrets,
+Treasury, and gas-station sponsor:
+
+```sh
+kubectl apply -k infra/k8s/overlays/testnet
+kubectl apply -k infra/k8s/overlays/mainnet
+```
+
+The runtime is single-network per process, so the testnet backend
+Deployment must be entirely separate from the mainnet one. The
+overlays make this the default shape.
+
+## CI deploys
+
+The `deploy.yml` workflow builds and pushes the three app images on
+every push to `main`, then runs `kubectl apply -k` against each
+overlay using the `KUBECONFIG_<NETWORK>` repository secret. See the
+workflow file at `.github/workflows/deploy.yml` for the exact steps.
+
+To pin a specific image tag, override `newTag` in the overlay's
+`kustomization.yaml`:
+
+```yaml
+images:
+  - name: ghcr.io/dwallet-labs/mpckit-backend
+    newTag: v1.2.3
+```
+
+## Ingress + TLS
+
+The base ingress routes `api.mpckit.xyz` to backend, `app.mpckit.xyz`
+to dashboard, `docs.mpckit.xyz` to docs. Overlays patch the host
+names (e.g. `api-testnet.mpckit.xyz`). Replace these with your own
+domain in the overlay's `kustomization.yaml`.
+
+cert-manager is expected to issue TLS via the `letsencrypt-prod`
+ClusterIssuer; swap or remove the annotation if you terminate TLS
+elsewhere.
+
+## Operating
+
+- **Migrations** run on backend container boot. Safe across pods —
+  Drizzle uses an advisory lock.
+- **Rolling updates**: `kubectl rollout restart deployment/backend -n
+  mpckit-testnet`. The backend uses graceful shutdown so in-flight
+  requests drain before exit.
+- **Scaling**: backend is stateless beyond Postgres + Redis; bump
+  `replicas` in the Deployment. The presign-pool warmup is
+  idempotent across replicas.
+- **Worker isolation**: the current default is `PROCESS_TYPE=both` so
+  each pod runs the worker too. If you need to scale HTTP without
+  scaling workers, split into two Deployments using
+  `PROCESS_TYPE=api` and `PROCESS_TYPE=worker`.

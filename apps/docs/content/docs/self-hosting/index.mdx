@@ -1,0 +1,64 @@
+---
+title: Self-hosting MpcKit
+description: Run your own MpcKit instance, pointed at testnet or mainnet, from a single VM or a Kubernetes cluster.
+---
+
+MpcKit is open source under BSD-3-Clause. The hosted version we
+operate is one tenant of this same software. You can run an identical
+stack on your own infrastructure, against testnet, mainnet, or a fork.
+
+## What's in the stack
+
+A self-hosted MpcKit deployment has three apps and three dependencies:
+
+<Cards>
+  <Card title="apps/backend" description="Bun + Elysia HTTP API and pg-boss worker. Owns the dWallet lifecycle, billing, presign pool, and Sui tx submission." />
+  <Card title="apps/dashboard" description="Next.js dashboard for issuing API keys, viewing balances, audit log, dWallets." />
+  <Card title="apps/docs" description="Next.js + Fumadocs site. The thing you're reading now." />
+  <Card title="Postgres 16" description="Accounts, audit log, billing ledger, presign pool state, idempotency." />
+  <Card title="Redis 7" description="Locks, idempotency cache, rate limits. Shared with the gas station for its coin pool." />
+  <Card title="sui-gas-station" description="Sponsored gas execution for every backend PTB. Loads a sponsor keypair, splits SUI into a coin pool, leases coins to the backend." />
+</Cards>
+
+## Pick your path
+
+<Cards>
+  <Card
+    title="Single VM with docker compose"
+    href="/docs/self-hosting/docker"
+    description="Everything on one box in 5 minutes. Right for evaluation and small teams."
+  />
+  <Card
+    title="Kubernetes with Kustomize"
+    href="/docs/self-hosting/kubernetes"
+    description="What we ship to production. Per-network overlays, ingress termination, rolling updates."
+  />
+</Cards>
+
+## Before you start
+
+You will need:
+
+- A funded **Sui keypair** for the protocol hot wallet (≥ 1 SUI on the
+  target network). This pays for `register_account`, DKG, and sign
+  PTBs but only after the gas station sponsors them, so balance
+  pressure is low.
+- A funded **Sui keypair** for the gas-station sponsor (≥ 5 SUI). The
+  station splits this balance into a pool of gas coins.
+- **Network-funded Treasury** with IKA + SUI for protocol fees, gated
+  behind the operator capability. See `apps/backend/scripts/deploy.ts`
+  for the publish path; the published env block at the end is what
+  goes into your config.
+- A **Sui fullnode** or RPC endpoint you trust. The public fullnodes
+  (`fullnode.testnet.sui.io`, `fullnode.mainnet.sui.io`) work; you can
+  point at your own node by overriding `SUI_GRPC_URL`.
+
+The runtime is **single-network per process**: one set of `apps/backend`
+pods serves one network. Run a second deployment with
+`IKA_NETWORK=mainnet` to serve mainnet from the same cluster.
+
+<Callout title="Pre-alpha vs. mainnet">
+  The ika 2PC-MPC mainnet protocol is production. This repo's defaults
+  target mainnet. The Solana pre-alpha mock signer is not part of the
+  MpcKit hosted layer; it lives in the recovery sibling stack.
+</Callout>

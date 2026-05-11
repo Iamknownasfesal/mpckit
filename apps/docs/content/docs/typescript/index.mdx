@@ -1,0 +1,56 @@
+---
+title: TypeScript SDK
+description: Overview of @mpckit/sdk. One MpcKit class for every chain ika supports.
+---
+
+`@mpckit/sdk` exposes a single `MpcKit` class. It composes a typed
+HTTP client, a `CryptoEngine` for the WASM-heavy DKG and centralized
+signature math, and a lazily-built on-chain reader for protocol
+public parameters.
+
+Consumers never need to import `@ika.xyz/sdk` directly. `MpcKit` wraps
+everything.
+
+## At a glance
+
+```ts
+import { MpcKit, Curve, Hash, SignatureAlgorithm } from "@mpckit/sdk";
+import { randomBytes } from "node:crypto";
+
+const api = new MpcKit({
+  baseUrl: "https://api.mpckit.xyz",
+  apiKey: process.env.MPCKIT_API_KEY!,
+  network: "testnet",
+});
+
+const seed = randomBytes(32);
+
+const { dwallet, userSecretKeyShareHex } = await api.onboard({
+  seed,
+  curve: Curve.SECP256K1,
+});
+
+const sig = await api.sign({
+  seed,
+  dwalletId: dwallet.id,
+  curve: Curve.SECP256K1,
+  signatureAlgorithm: SignatureAlgorithm.ECDSASecp256k1,
+  hashScheme: Hash.SHA256,
+  message: new TextEncoder().encode("hello, ika"),
+  userSecretKeyShareHex,
+});
+```
+
+## Where to go next
+
+<Cards>
+  <Card title="Setup" href="/docs/typescript/setup" description="Install, construct, and configure MpcKit." />
+  <Card title="Onboarding" href="/docs/typescript/onboarding" description="DKG end-to-end via api.onboard." />
+  <Card title="Signing" href="/docs/typescript/signing" description="Producing a raw signature with api.sign." />
+  <Card title="dWallets" href="/docs/typescript/dwallets" description="Listing, fetching, and the DWallet shape." />
+  <Card title="Billing" href="/docs/typescript/billing" description="Deposits, balance, pricing, and history." />
+  <Card title="Introspection" href="/docs/typescript/introspection" description="Health, network info, and protocol parameters." />
+  <Card title="Crypto engines" href="/docs/typescript/crypto-engines" description="Inline vs Web Worker crypto for browser apps." />
+  <Card title="Errors" href="/docs/typescript/errors" description="Typed error classes and how to handle them." />
+  <Card title="Utilities" href="/docs/typescript/utilities" description="Hex helpers, idempotency keys, raw HTTP escape hatch." />
+</Cards>

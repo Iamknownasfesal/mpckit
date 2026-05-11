@@ -1,0 +1,108 @@
+---
+title: Configuration
+description: Every environment variable the backend reads, what it's for, and what's required.
+---
+
+The full schema lives in `apps/backend/src/config/env.ts`. This page
+groups it by concern.
+
+## Required for any deploy
+
+| Variable | Description |
+|---|---|
+| `IKA_NETWORK` | `testnet` or `mainnet`. Pins the process to one network. |
+| `HOT_WALLET_SUI_SECRET_HEX` | 32-byte ed25519 secret hex for the protocol signer (when `HOT_WALLET_PROVIDER=env`). |
+| `DATABASE_URL` | Postgres connection string. |
+| `REDIS_URL` | Redis connection string. |
+| `SUI_GAS_STATION_URL` | HTTP URL of the gas-station. |
+| `SUI_GAS_STATION_AUTH` | Bearer token the backend sends to the gas-station. |
+| `ADMIN_API_KEY` | Bootstrap admin key. The first request to `/v1/admin/users` requires this. |
+
+## Per-network protocol IDs
+
+After `bun run apps/backend/scripts/deploy.ts <network>` the script
+emits the IDs the backend needs:
+
+| Variable | Description |
+|---|---|
+| `MPCKITCORE_<NETWORK>_PACKAGE_ID` | Move package id. |
+| `MPCKITCORE_<NETWORK>_ADMIN_CAP_ID` | AdminCap object id. |
+| `MPCKITCORE_<NETWORK>_OPERATOR_CAP_ID` | OperatorCap object id. The backend uses this to authorize protocol-paying entries. |
+| `MPCKITCORE_<NETWORK>_TREASURY_ID` | Shared Treasury object id. Holds the IKA + SUI the protocol entries consume. |
+
+Both networks may be set; the backend selects the right block based on
+its `IKA_NETWORK`.
+
+## Hot wallet
+
+| Variable | Description |
+|---|---|
+| `HOT_WALLET_PROVIDER` | `env` (dev) or `aws-kms` (prod). |
+| `HOT_WALLET_SUI_SECRET_HEX` | Required when provider=env. |
+| `HOT_WALLET_SUI_SECRET_KMS_CIPHERTEXT_B64` | Required when provider=aws-kms. |
+| `HOT_WALLET_KMS_KEY_ID` | Pinned KMS key id; defends against ciphertext substitution. |
+| `HOT_WALLET_KMS_REGION` | AWS region for KMS client. Falls back to `AWS_REGION`. |
+
+## Gas station
+
+The `sui-gas-station` daemon must be reachable from the backend. The
+sponsor keypair is **separate** from the protocol hot wallet — never
+reuse keys between roles.
+
+| Variable | Description |
+|---|---|
+| `SUI_GAS_STATION_URL` | Default `http://gas-station:9527` in compose. |
+| `SUI_GAS_STATION_AUTH` | Long random string. The gas-station validates this on every request. |
+| `SUI_GAS_STATION_SPONSOR_KEYPAIR_B64` | Base64-encoded `flag || privkey` for the sponsor. |
+| `SUI_GAS_STATION_FULLNODE_URL` | Sui RPC. Match the network. |
+| `SUI_GAS_STATION_REDIS_URL` | Redis connection. Shares the cluster's Redis but uses its own keyspace. |
+| `SUI_GAS_STATION_BUDGET_MIST` | Per-PTB gas budget reservation. Default `500_000_000` (0.5 SUI). |
+| `SUI_GAS_STATION_RESERVE_SECS` | Reservation TTL on the station. Default 30s. |
+
+## Billing
+
+| Variable | Description |
+|---|---|
+| `BILLING_DEPOSIT_MASTER_SEED_HEX` | 32-byte HKDF seed for deriving per-user deposit addresses. Long-lived secret; rotating orphans existing addresses. |
+| `BILLING_SWEEP_DESTINATION_ADDRESS` | Where consolidated deposits land. |
+| `BILLING_SWEEP_MIN_MICRO` | Skip sweeps below this USD-equivalent. Default $0.10. |
+| `BILLING_MIN_DEPOSIT_MICRO` | Reject deposits below this. Default $1. |
+| `BILLING_ACCEPTED_COIN_TYPES` | Comma-separated coin types. Default `0x2::sui::SUI`. |
+| `BILLING_USD_PRICES` | Fallback USD prices when CoinGecko is unreachable. Format: `0x2::sui::SUI=1.20,0x...::ika::IKA=0.05`. |
+| `BILLING_COINGECKO_IDS` | Polled price feeds. Format: `0x2::sui::SUI=sui`. |
+| `BILLING_PRICE_DKG_MICRO` | Default `50_000` (= $0.05). |
+| `BILLING_PRICE_SIGN_MICRO` | Default `10_000` (= $0.01). |
+| `BILLING_PRICE_ENCRYPTION_KEY_MICRO` | Default `1_000` (= $0.001). |
+
+## Presign pool
+
+| Variable | Description |
+|---|---|
+| `PRESIGN_POOL_LOW_WATER` | Boot warmup fills any bucket below this. Default 20. |
+| `PRESIGN_POOL_HIGH_WATER` | Maximum target bucket size. Default 100. |
+| `PRESIGN_BATCH_SIZE` | Single PTB mints this many caps. Default 10. |
+| `PRESIGN_RESERVATION_TTL_SEC` | Allocated rows past this age get swept back to ready. Default 300. |
+
+## Dashboard auth
+
+| Variable | Description |
+|---|---|
+| `BETTER_AUTH_SECRET` | 32-byte random secret for session cookies. |
+| `BETTER_AUTH_URL` | Public backend origin, e.g. `https://api.mpckit.xyz`. |
+| `DASHBOARD_TRUSTED_ORIGINS` | Comma-separated dashboard origins allowed to send cookies. |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Optional GitHub OAuth. |
+
+## Process role
+
+| Variable | Description |
+|---|---|
+| `PROCESS_TYPE` | `api` (HTTP only), `worker` (pg-boss handlers only), `both` (default; ok for single-pod). |
+| `PORT` | HTTP listener port. Default 3000. |
+| `LOG_LEVEL` | `fatal`, `error`, `warn`, `info` (default), `debug`, `trace`. |
+| `NODE_ENV` | `development`, `test`, `production`. |
+
+## Self-host opt-in
+
+| Variable | Description |
+|---|---|
+| `ALLOW_SHARED_DWALLETS` | `true` to expose the shared-dWallet DKG path. Default `false`. Hosted MpcKit is non-custodial; only operators taking custody should turn this on. |

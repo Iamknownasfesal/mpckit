@@ -1,0 +1,90 @@
+---
+title: Low-level onboarding
+description: Drive DKG step by step from your own crypto pipeline.
+---
+
+The four-step onboarding flow is exposed directly so you can drive it
+from your own crypto pipeline (FFI to the upstream ika crypto crate,
+hardware-backed signers, alternative WASM bindings, etc.).
+
+```rust
+api.register_encryption_key(/* args */).await?;
+api.onboard_zero_trust(/* args */).await?;
+// poll get_dwallet until status == AwaitingUserShare
+api.accept_user_share(/* args */).await?;
+```
+
+## Stages
+
+<Steps>
+
+<Step>
+
+### Register the encryption key
+
+```rust
+api.register_encryption_key(RegisterEncryptionKeyArgs {
+    curve: Curve::Secp256k1,
+    encryption_key_bytes: /* class-groups public component */,
+    proof_bytes: /* possession proof */,
+}).await?;
+```
+
+Returns the backend record id you'll pass into `onboard_zero_trust`.
+
+</Step>
+
+<Step>
+
+### Submit the DKG
+
+```rust
+let onboard = api.onboard_zero_trust(OnboardZeroTrustArgs {
+    encryption_key_id: ek.id,
+    dkg_message_bytes: /* user-side DKG message */,
+}).await?;
+```
+
+The backend submits the on-chain DKG. The dWallet starts in
+`Submitting` and transitions to `AwaitingUserShare`.
+
+</Step>
+
+<Step>
+
+### Poll for the awaiting state
+
+```rust
+loop {
+    let d = api.get_dwallet(&onboard.dwallet.id).await?;
+    if matches!(d.dwallet.status, DWalletStatus::AwaitingUserShare) { break; }
+    if matches!(d.dwallet.status, DWalletStatus::Failed) { /* bail */ }
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+}
+```
+
+</Step>
+
+<Step>
+
+### Accept the user share
+
+```rust
+api.accept_user_share(AcceptUserShareArgs {
+    dwallet_id: onboard.dwallet.id.clone(),
+    user_public_output_signature: /* sign(user_public_output, seed-derived sk) */,
+}).await?;
+```
+
+The dWallet transitions to `Active`. From here it's signable.
+
+</Step>
+
+</Steps>
+
+## Argument shapes
+
+The exact `*Args` structs depend on the upstream crypto crate's
+output shapes. They're documented in the rustdoc shipped with the
+crate. The high-level [crypto-feature](/docs/rust/high-level-crypto)
+client wraps all four steps when the `crypto` feature is on.

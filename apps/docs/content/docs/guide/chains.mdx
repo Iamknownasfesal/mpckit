@@ -1,0 +1,104 @@
+---
+title: Curves & chains
+description: mpckit signs at the curve level. Map your chain to a curve, signature algorithm, and hash to call sign().
+---
+
+The SDK's `sign()` does not take a "chain" string. It takes a **curve**,
+a **signature algorithm**, a **hash**, and a **message**. Chain
+compatibility is the question of which `(curve, algorithm, hash)` triple
+your chain expects.
+
+## Curves
+
+```ts
+import { Curve } from "@mpckit/sdk";
+
+Curve.SECP256K1; // 0
+Curve.SECP256R1; // 1
+Curve.ED25519;   // 2
+Curve.RISTRETTO; // 3
+```
+
+`onboard()` is parameterized by curve: a SECP256K1 dWallet signs the
+SECP256K1 family of chains; an ED25519 dWallet signs the ED25519 family.
+You'll typically have one dWallet per curve per user.
+
+## Mapping curve → chains
+
+| Curve       | Chains it covers                                        |
+| ----------- | ------------------------------------------------------- |
+| SECP256K1   | Bitcoin, Ethereum, every EVM L2/sidechain, Cosmos chains |
+| ED25519     | Solana, Sui, Aptos, NEAR, Substrate / Polkadot          |
+| SECP256R1   | WebAuthn signers, niche enterprise chains                |
+| RISTRETTO   | Substrate-flavoured zk uses                              |
+
+The chain you broadcast to determines how you encode the signature
+(recoverable v-byte for EVM, Schnorr for Bitcoin Taproot, raw 64-byte
+EdDSA for Solana, etc.). The signature bytes the SDK returns are the
+same regardless.
+
+## Signature algorithms and hashes
+
+```ts
+import { Hash, SignatureAlgorithm } from "@mpckit/sdk";
+
+SignatureAlgorithm.ECDSASecp256k1;     // SECP256K1
+SignatureAlgorithm.Taproot;            // SECP256K1 (Bitcoin Taproot)
+SignatureAlgorithm.ECDSASecp256r1;     // SECP256R1
+SignatureAlgorithm.EdDSA;              // ED25519
+SignatureAlgorithm.SchnorrkelSubstrate; // RISTRETTO
+
+Hash.KECCAK256;     // SECP256K1 + ECDSA (Ethereum)
+Hash.SHA256;        // SECP256K1 + ECDSA (Bitcoin SegWit), SECP256K1 + Taproot, SECP256R1 + ECDSA
+Hash.DoubleSHA256;  // SECP256K1 + ECDSA (Bitcoin legacy)
+Hash.SHA512;        // ED25519 + EdDSA
+Hash.Merlin;        // RISTRETTO + Schnorrkel
+```
+
+Common combinations:
+
+| Chain           | Curve     | Signature algorithm | Hash         |
+| --------------- | --------- | ------------------- | ------------ |
+| Ethereum / EVMs | SECP256K1 | ECDSASecp256k1      | KECCAK256    |
+| Bitcoin Taproot | SECP256K1 | Taproot             | SHA256       |
+| Bitcoin SegWit  | SECP256K1 | ECDSASecp256k1      | SHA256       |
+| Bitcoin legacy  | SECP256K1 | ECDSASecp256k1      | DoubleSHA256 |
+| Solana          | ED25519   | EdDSA               | SHA512       |
+| Sui             | ED25519   | EdDSA               | SHA512       |
+| WebAuthn / P-256| SECP256R1 | ECDSASecp256r1      | SHA256       |
+| Substrate       | RISTRETTO | SchnorrkelSubstrate | Merlin       |
+
+The hash is part of the algorithm, not a "pre-hash this then sign raw"
+toggle. Pass the message you want signed; the SDK handles the
+hashing per the algorithm spec.
+
+## Pricing
+
+Pricing is per-op in **microUSD** (1 microUSD = $0.000001). Op prices
+ship with the live pricing payload.
+
+```ts
+const pricing = await api.billingPricing();
+
+pricing.unit;        // "microUSD"
+pricing.microPerUsd; // 1_000_000
+pricing.ops;         // Record<string, number>: microUSD per op
+pricing.opsUsd;      // Record<string, string>: same prices as USD strings
+```
+
+`pricing.ops` keys are the ops the backend charges for. At time of
+writing: `encryption-key`, `dwallet.dkg`, and `sign`, with default
+rates of 1,000 / 50,000 / 10,000 microUSD. Operators can change those
+defaults, so always read the live values from `pricing.ops` instead
+of hardcoding.
+
+`pricing.acceptedCoinTypes` lists the Sui coin types the backend accepts
+for deposits, and `pricing.coinPricesUsd` is the live USD/coin feed used
+to credit incoming deposits.
+
+<Callout title="Why microUSD on the wire">
+  microUSD lets billing be exact in integer math. The SDK exposes both
+  `creditsMicro` (string-encoded BigInt) and `creditsUsd` (rendered USD
+  string) on every billing response, so you can pick the format that
+  fits your UI.
+</Callout>

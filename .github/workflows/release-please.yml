@@ -1,0 +1,36 @@
+# release-please opens a Release PR on every push to main, computing
+# the next version from conventional-commit messages since the last
+# release. Merging the PR creates the git tag (`v<version>`), which
+# triggers `deploy.yml` to push images and roll out to mainnet.
+#
+# Commit message format:
+#   feat(scope): user-facing change         → minor bump (or patch pre-1.0)
+#   fix(scope): bug fix                     → patch bump
+#   feat(scope)!: breaking change           → major bump (or minor pre-1.0)
+#   chore/ci/test/docs(scope): …            → no bump (hidden in changelog)
+#
+# Repo currently uses `scope: subject` (no type prefix). New commits
+# should switch to conventional commits so release-please picks them
+# up. Until then the Release PR will sit at the manifest version.
+
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          # Default GITHUB_TOKEN is fine — we only need contents:write
+          # for the tag and pull-requests:write for the PR.
+          token: ${{ secrets.GITHUB_TOKEN }}

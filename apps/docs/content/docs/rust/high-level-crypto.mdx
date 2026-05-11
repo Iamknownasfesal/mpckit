@@ -1,0 +1,64 @@
+---
+title: High-level (crypto feature)
+description: onboard / sign once the crypto feature lands. Same shapes as the TypeScript SDK.
+---
+
+When the `crypto` feature is enabled, the same end-to-end ceremonies
+the TypeScript SDK runs are available behind two methods: `onboard`
+and `sign`.
+
+```toml title="Cargo.toml"
+[dependencies]
+mpckit = { version = "0.1", features = ["crypto"] }
+```
+
+```rust
+use mpckit::{Curve, Hash, OnboardArgs, SignArgs, SignatureAlgorithm};
+
+let result = api.onboard(OnboardArgs {
+    seed: &seed_bytes,
+    curve: Curve::Secp256k1,
+    timeout: None,
+}).await?;
+
+let sig = api.sign(SignArgs {
+    seed: &seed_bytes,
+    dwallet_id: &result.dwallet.id,
+    curve: Curve::Secp256k1,
+    signature_algorithm: SignatureAlgorithm::EcdsaSecp256k1,
+    hash_scheme: Hash::Sha256,
+    message: b"hello, ika",
+    user_secret_key_share_hex: &result.user_secret_key_share_hex,
+    idempotency_key: None,
+    timeout: None,
+}).await?;
+```
+
+`OnboardResult` and `SignResult` mirror the TypeScript shapes:
+
+```rust
+pub struct OnboardResult {
+    pub dwallet: DWallet,
+    pub encryption_key: EncryptionKey,
+    pub encrypted_user_secret_key_share_id: String,
+    pub user_secret_key_share_hex: String,   // PERSIST
+    pub user_public_output_hex: String,      // PERSIST
+    pub tx_digests: TxDigests,
+}
+
+pub struct SignResult {
+    pub signature: Vec<u8>,
+    pub sign_request_id: String,
+    pub sign_session_id: String,
+    pub tx_digest: Option<String>,
+}
+```
+
+## Until the feature lands
+
+The `crypto` feature requires the upstream ika crypto crate to be
+published. Until then, drive the
+[low-level onboarding](/docs/rust/low-level-onboarding) and
+[low-level signing](/docs/rust/low-level-signing) methods plus the
+upstream crypto crate directly. The HTTP shapes are stable; only the
+high-level wrappers are gated.

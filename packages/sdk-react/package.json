@@ -1,0 +1,45 @@
+{
+  "name": "@mpckit/react",
+  "version": "0.1.0",
+  "description": "TanStack Query bindings for the MpcKit SDK.",
+  "license": "BSD-3-Clause",
+  "author": "fesal <fesal@dwalletlabs.com>",
+  "homepage": "https://mpckit.xyz",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Iamknownasfesal/mpckit.git",
+    "directory": "packages/sdk-react"
+  },
+  "bugs": "https://github.com/Iamknownasfesal/mpckit/issues",
+  "keywords": ["mpc", "sui", "react", "tanstack-query", "ika", "mpckit"],
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@mpckit/sdk": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^15.0.0",
+    "@tanstack/react-query": "^5.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "typescript": "^5.6.3"
+  }
+}

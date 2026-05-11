@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Shared base manifests. Per-network overlays under ../overlays/<env>
+# patch the namespace, image tags, hostnames, and any in-cluster
+# Postgres/Redis you don't want (managed services would patch the
+# Deployments out via `kubectl delete -k overlays/<env>` after apply).
+
+resources:
+  - namespace.yaml
+  - postgres.yaml
+  - redis.yaml
+  - gas-station.yaml
+  - backend.yaml
+  - dashboard.yaml
+  - docs.yaml
+  - ingress.yaml
+
+images:
+  - name: ghcr.io/dwallet-labs/mpckit-backend
+    newTag: latest
+  - name: ghcr.io/dwallet-labs/mpckit-dashboard
+    newTag: latest
+  - name: ghcr.io/dwallet-labs/mpckit-docs
+    newTag: latest
+
+# Common labels applied to every object the overlay produces.
+commonLabels:
+  app.kubernetes.io/part-of: mpckit

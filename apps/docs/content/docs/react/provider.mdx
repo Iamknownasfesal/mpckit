@@ -1,0 +1,110 @@
+---
+title: Provider
+description: MpcKitProvider config, the worker factory, and bundler shapes.
+---
+
+```tsx title="app/providers.tsx"
+"use client";
+
+import { MpcKitProvider } from "@mpckit/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MpcKitProvider
+        options={{
+          baseUrl: "https://api.mpckit.xyz",
+          apiKey: process.env.NEXT_PUBLIC_MPCKIT_API_KEY!,
+          network: "testnet",
+        }}
+        useWorker
+        workerFactory={() =>
+          new Worker(
+            new URL("@mpckit/sdk/worker-impl", import.meta.url),
+            { type: "module" },
+          )
+        }
+      >
+        {children}
+      </MpcKitProvider>
+    </QueryClientProvider>
+  );
+}
+```
+
+## `MpcKitProviderProps`
+
+<TypeTable
+  type={{
+    options: { description: "MpcKitOptions minus `crypto` (the provider supplies that based on `useWorker` / `crypto`).", type: "Omit<MpcKitOptions, \"crypto\">" },
+    useWorker: { description: "Drive crypto from a Web Worker constructed via `workerFactory`.", type: "boolean" },
+    workerFactory: { description: "Bundler-specific Worker constructor. Required when useWorker is true.", type: "() => Worker" },
+    crypto: { description: "Override the crypto engine entirely (testing, custom adapters).", type: "CryptoEngine" },
+  }}
+/>
+
+## Worker factory by bundler
+
+The `workerFactory` shape varies by bundler.
+
+<Tabs items={["Vite", "Next.js", "Webpack 5"]}>
+
+<Tab value="Vite">
+
+```ts
+workerFactory={() =>
+  new Worker(
+    new URL("@mpckit/sdk/worker-impl", import.meta.url),
+    { type: "module" },
+  )
+}
+```
+
+</Tab>
+
+<Tab value="Next.js">
+
+```ts
+workerFactory={() =>
+  new Worker(
+    new URL("@mpckit/sdk/worker-impl", import.meta.url),
+    { type: "module" },
+  )
+}
+```
+
+Wrap any code that calls `new Worker(...)` in a `"use client"`
+component. Next.js needs the worker URL resolution to happen on the
+client.
+
+</Tab>
+
+<Tab value="Webpack 5">
+
+```ts
+workerFactory={() =>
+  new Worker(new URL("@mpckit/sdk/worker-impl", import.meta.url))
+}
+```
+
+</Tab>
+
+</Tabs>
+
+## When to skip the worker
+
+Server-rendered or build-time signing (e.g. backend route handlers,
+build scripts) doesn't need a worker. Drop `useWorker` and
+`workerFactory`; the inline engine runs on the calling thread.
+
+```tsx
+<MpcKitProvider options={{ baseUrl, apiKey, network: "testnet" }}>
+  {children}
+</MpcKitProvider>
+```
+
+For client-only apps doing real-time signing, the worker keeps the UI
+thread responsive while DKG (a few seconds of WASM math) runs.

@@ -1,0 +1,79 @@
+---
+title: 2PC-MPC
+description: The signing protocol behind ika. Two-party ECDSA where the second party is emulated by a permissionless MPC network on Sui mainnet.
+---
+
+ika implements **2PC-MPC**, the protocol introduced in
+[eprint 2024/253](https://eprint.iacr.org/2024/253) ("2PC-MPC: Emulating
+Two Party ECDSA in Large-Scale MPC", dWallet Labs). It's the protocol
+that powers every signature mpckit produces.
+
+The short version: every signature is the cooperation of *two* parties.
+The first party is **the user** (the seed-derived client share you
+persist after `onboard`). The second party is *not* a single counter-
+party. It's a permissionless network on Sui that emulates one party
+through a large-scale threshold MPC. Both halves must participate. The
+full ECDSA secret is never assembled, in memory or otherwise.
+
+## What's in the paper
+
+The 2024/253 paper presents **low-overhead UC-secure, publicly
+verifiable, threshold ECDSA protocols with identifiable abort**.
+Concretely:
+
+- **Two-party from the user's view.** The user runs a constant-round
+  two-party ECDSA exchange against "the network."
+- **N-party under the hood.** The network's role is run by an n-party
+  threshold MPC, with every Ika validator participating. No single operator
+  can sign for the user; no minority subset of validators can either.
+- **Zero-trust.** The protocol is structured so that the user is
+  *cryptographically required* to produce every signature. The network
+  on its own cannot. Compromising the entire network does not let an
+  attacker sign without the user.
+- **Identifiable abort.** If a validator misbehaves, the abort points to
+  who. This is how the network stays accountable while remaining
+  permissionless.
+- **Publicly verifiable.** The signing transcript can be checked by any
+  third party against on-chain state.
+
+## Why this matters for you
+
+A "managed wallet" service typically holds the key during signing,
+even if only for microseconds. 2PC-MPC removes that window entirely.
+Three things follow:
+
+- **Compromising your servers does not compromise the dWallet.** Your
+  servers never hold a full key; they hold one party's share, derived
+  from the user's seed.
+- **Compromising the ika network does not let an attacker sign for your
+  users.** Validators hold the other party's share, threshold-split, and
+  the user's share is required.
+- **The on-chain record is auditable.** dWallet creation, encryption-key
+  registration, and every sign session are anchored on Sui. You can
+  walk the trail without going through mpckit.
+
+## The user share
+
+The user's "share" is the bytes you receive as `userSecretKeyShareHex`
+when `onboard` finishes. It is encrypted (so the backend wouldn't
+recover it even if you sent it in transit), and it is required for every
+future signature on the dWallet. We do not store it.
+
+See [dWallets](/docs/guide/dwallets) for the full picture of what
+state lives where.
+
+## The network share
+
+The network's share is held in threshold form across the validator set
+on Sui. The on-chain encryption key (an instance of `EncryptionKey` in
+the mpckit types) is the public component you can inspect. The secret
+component is split among validators per the underlying threshold
+scheme.
+
+## Where to go next
+
+<Cards>
+  <Card title="dWallets" href="/docs/guide/dwallets" description="The on-chain unit of ownership and the local state you persist alongside it." />
+  <Card title="Curves and chains" href="/docs/guide/chains" description="Why sign() takes a curve, not a chain string." />
+  <Card title="Read the paper" href="https://eprint.iacr.org/2024/253" description="2PC-MPC, dWallet Labs, IACR ePrint 2024/253." />
+</Cards>

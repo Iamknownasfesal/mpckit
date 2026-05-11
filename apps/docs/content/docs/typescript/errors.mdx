@@ -1,0 +1,77 @@
+---
+title: Errors
+description: Typed error classes and how to handle each one.
+---
+
+```ts
+import {
+  MpcKitError,
+  MpcKitInsufficientCreditsError,
+  MpcKitTimeoutError,
+} from "@mpckit/sdk";
+
+try {
+  await api.sign(args);
+} catch (e) {
+  if (e instanceof MpcKitInsufficientCreditsError) {
+    // surface a "top up credits" UI
+  } else if (e instanceof MpcKitTimeoutError) {
+    // polling exceeded args.timeoutMs; the sign session may still
+    // complete on the backend. Use the raw client to poll
+    // /v1/sign/:id by the signRequestId from a previous response.
+  } else if (e instanceof MpcKitError) {
+    // any other typed API error
+  } else {
+    throw e;
+  }
+}
+```
+
+## Error classes
+
+| Class                              | Thrown when                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------ |
+| `MpcKitError`                      | Base class. Any HTTP error the backend returned with a structured body.  |
+| `MpcKitInsufficientCreditsError`   | Project balance can't cover the op. Status 402, code `INSUFFICIENT_CREDITS`. Top up and retry. |
+| `MpcKitTimeoutError`               | Polling exceeded `timeoutMs`. The op may still finish; poll the request by id via `api.raw`. |
+
+`MpcKitError` carries the HTTP status, the backend's error code, the
+raw response body, and a human-readable message:
+
+```ts
+catch (e) {
+  if (e instanceof MpcKitError) {
+    console.error(e.status, e.code, e.message);
+    console.error(e.body); // raw response body the backend returned
+  }
+}
+```
+
+`MpcKitTimeoutError` is a plain `Error` subclass: it has a `name`
+and `message` only. To resume a timed-out sign session, hold onto
+the `signRequestId` you got from a prior call (or a previously
+issued `idempotencyKey`) and re-query the request via the raw HTTP
+client.
+
+## Recovering from a sign timeout
+
+```ts
+import { MpcKitTimeoutError, newIdempotencyKey } from "@mpckit/sdk";
+
+const idempotencyKey = newIdempotencyKey();
+
+try {
+  return await api.sign({ /* ... */, idempotencyKey });
+} catch (e) {
+  if (e instanceof MpcKitTimeoutError) {
+    // safe to retry with the same idempotency key: the backend
+    // dedupes and returns the original sign session.
+    return await api.sign({ /* ... */, idempotencyKey });
+  }
+  throw e;
+}
+```
+
+Reusing the same `idempotencyKey` is the simplest recovery path
+because the backend dedupes on it; a retried call returns the
+original signature instead of triggering a second on-chain session.

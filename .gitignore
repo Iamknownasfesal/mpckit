@@ -1,0 +1,50 @@
+# dependencies
+node_modules
+.pnp
+.pnp.*
+
+# bun
+bun.lockb
+
+# build artifacts
+dist
+build
+.next
+out
+.turbo
+*.tsbuildinfo
+
+# rust
+target
+
+# move
+packages/ika_api_move/build
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# editors / OS
+.DS_Store
+.idea
+.vscode
+*.swp
+
+# logs
+*.log
+logs
+
+# coverage
+coverage
+*.lcov
+
+# claude
+.claude/
+
+# vercel
+.vercel/
+
+# fumadocs generated
+apps/docs/.source/

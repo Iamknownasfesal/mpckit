@@ -1,0 +1,39 @@
+{
+  "name": "@mpckit/sdk",
+  "version": "0.1.0",
+  "description": "MpcKit TypeScript SDK — hosted MPC signing for Sui dWallets.",
+  "license": "BSD-3-Clause",
+  "author": "fesal <fesal@dwalletlabs.com>",
+  "homepage": "https://mpckit.xyz",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Iamknownasfesal/mpckit.git",
+    "directory": "packages/sdk-ts"
+  },
+  "bugs": "https://github.com/Iamknownasfesal/mpckit/issues",
+  "keywords": ["mpc", "sui", "ika", "dwallet", "wallet", "signing", "crypto"],
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./eden": "./src/eden.ts",
+    "./worker-impl": "./src/crypto/worker-impl.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@elysiajs/eden": "^1.4.9",
+    "@mpckit/core": "workspace:*",
+    "@ika.xyz/sdk": "^0.4.1",
+    "@mysten/sui": "^2.16.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

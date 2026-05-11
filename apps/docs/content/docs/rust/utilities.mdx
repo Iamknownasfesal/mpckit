@@ -1,0 +1,41 @@
+---
+title: Utilities
+description: Idempotency keys, hex helpers, and shared crate-level helpers.
+---
+
+## `new_idempotency_key()`
+
+```rust
+use mpckit::new_idempotency_key;
+
+let key = new_idempotency_key(); // UUID-v7 string
+```
+
+Pass it as `SignSubmitArgs.idempotency_key` (or as the equivalent
+field on the high-level `SignArgs`) to make a sign call safe to
+retry.
+
+## Hex helpers
+
+```rust
+use mpckit::{from_hex, to_hex};
+
+let bytes = from_hex("0xdeadbeef")?;            // Vec<u8>
+let hex = to_hex(&[0u8, 1, 2]);                 // "0x000102"
+```
+
+Both helpers normalize the leading `0x`. `from_hex` accepts inputs
+with or without the prefix; `to_hex` always emits one.
+
+## Curve / algorithm constants
+
+```rust
+use mpckit::{Curve, Hash, SignatureAlgorithm};
+
+let c: Curve = Curve::Secp256k1;          // 0
+let h: Hash = Hash::Sha256;
+let s: SignatureAlgorithm = SignatureAlgorithm::EcdsaSecp256k1;
+```
+
+Each enum implements `From<u32>` / `TryFrom<u32>` if you're decoding
+on-chain values directly.

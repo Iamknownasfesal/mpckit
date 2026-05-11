@@ -1,0 +1,210 @@
+---
+title: Your first signature
+description: A walk-through of onboard + sign, end to end, with the bytes you have to keep.
+---
+
+This is the longer version of the quickstart. It walks through every
+stage of `onboard` and `sign` so you know what's on the wire, what's
+local, and what you must persist.
+
+## Setting
+
+You're going to:
+
+1. Construct an `MpcKit` client with a testnet API key.
+2. Onboard a SECP256K1 zero-trust dWallet (DKG runs end-to-end).
+3. Sign an arbitrary message with that dWallet using ECDSA + SHA-256.
+
+Codes are TypeScript. The Rust SDK has the same shapes; see
+[Rust SDK](/docs/rust).
+
+## Stage 1. Construct the client
+
+```ts title="ika.ts"
+import { MpcKit } from "@mpckit/sdk";
+
+export const api = new MpcKit({
+  baseUrl: "https://api.mpckit.xyz",
+  apiKey: process.env.MPCKIT_API_KEY!,
+  network: "testnet",
+});
+```
+
+`MpcKit` composes a typed HTTP client, a `CryptoEngine` (default:
+`InlineCryptoEngine`, runs on the calling thread), and a lazily-built
+on-chain reader for protocol public parameters.
+
+For browser apps, swap in `WebWorkerCryptoEngine` or pass `useWorker:
+true` in the React provider so DKG and sign ceremonies don't block the
+main thread.
+
+## Stage 2. Onboard
+
+```ts title="onboard.ts"
+import { Curve } from "@mpckit/sdk";
+import { randomBytes } from "node:crypto";
+
+const seed = randomBytes(32);
+
+const result = await api.onboard({
+  seed,
+  curve: Curve.SECP256K1,
+});
+
+// PERSIST:
+const dwalletId = result.dwallet.id;
+const userSecretKeyShareHex = result.userSecretKeyShareHex;
+const userPublicOutputHex = result.userPublicOutputHex;
+```
+
+What happens behind that single call:
+
+<Steps>
+
+<Step>
+
+### Encryption-key registration
+
+The SDK derives a class-groups encryption key from the seed and
+registers its public component via `POST /v1/encryption-keys`. The
+backend submits the PTB on your behalf. The call is server-side
+idempotent on (user, curve), so retries are free.
+
+</Step>
+
+<Step>
+
+### DKG submission
+
+The SDK runs the local DKG prep and posts the result to
+`POST /v1/dwallets`. The backend submits the on-chain DKG transaction.
+
+</Step>
+
+<Step>
+
+### Polling
+
+The SDK reads on-chain state directly via the Sui fullnode (through
+`IkaClient.getDWalletInParticularState`) until the dWallet reaches
+`AwaitingKeyHolderSignature`. Default timeout: 10 minutes
+(`OnboardArgs.timeoutMs`).
+
+</Step>
+
+<Step>
+
+### Accept
+
+The SDK signs the user-public-output, then submits
+`POST /v1/dwallets/:id/accept`. The dWallet transitions to `Active`.
+Two transaction digests come back in
+`result.txDigests.{onboard, accept}`.
+
+</Step>
+
+</Steps>
+
+## Stage 3. Keep the seed. Persist the share for the warm path.
+
+The seed is the only thing you must protect. Lose it and the dWallet
+is unrecoverable. The plaintext share is the warm-path input `sign`
+expects, but it isn't a backup-of-record: it can be recovered from the
+on-chain `EncryptedUserSecretKeyShare` plus the seed, using
+`UserShareEncryptionKeys.decryptUserShare` from upstream
+`@ika.xyz/sdk`.
+
+```ts
+// the part you MUST keep safe (in a passkey, KMS, env var, …):
+const seed: Uint8Array = /* … */;
+
+// what you store alongside the dwallet for the warm sign path:
+await db.dwallets.insert({
+  id: dwalletId,
+  curve: result.dwallet.curve,
+  userSecretKeyShareHex,        // pass to sign(); recoverable from seed if lost
+  userPublicOutputHex,          // recoverable from chain
+  encryptedShareId: result.encryptedUserSecretKeyShareId,
+});
+```
+
+The backend never stores the seed or the plaintext share. Lose the
+plaintext share and you can rebuild it from chain + seed. Lose the
+seed and the dWallet is gone.
+
+## Stage 4. Sign
+
+```ts title="sign.ts"
+import { Curve, Hash, SignatureAlgorithm } from "@mpckit/sdk";
+
+const message = new TextEncoder().encode("hello, ika");
+
+const sig = await api.sign({
+  seed,
+  dwalletId,
+  curve: Curve.SECP256K1,
+  signatureAlgorithm: SignatureAlgorithm.ECDSASecp256k1,
+  hashScheme: Hash.SHA256,
+  message,
+  userSecretKeyShareHex,
+});
+
+console.log(sig.signature);     // Uint8Array, the raw signature
+console.log(sig.signRequestId); // backend record id
+console.log(sig.signSessionId); // ika protocol session id
+console.log(sig.txDigest);      // sui tx digest, or null if not finalized yet
+```
+
+What happens behind that call:
+
+<Steps>
+
+<Step>
+
+### Local prep
+
+The SDK runs the centralized-signature math (presign + first-round
+message) locally. This is the WASM-heavy step that the worker engine
+moves off the main thread.
+
+</Step>
+
+<Step>
+
+### Submission
+
+The SDK reserves a presign and gets its bytes via `POST /v1/sign`,
+runs the centralized signature math locally, then posts the result to
+`POST /v1/sign/:id/submit`. The backend authenticates against the API
+key, charges the project's credit balance the configured op price,
+and submits the on-chain sign session.
+
+</Step>
+
+<Step>
+
+### Polling
+
+The SDK polls `GET /v1/sign/:id` until status is `completed` (or
+`failed`). Default end-to-end timeout: 3 minutes
+(`SignArgs.timeoutMs`).
+
+</Step>
+
+<Step>
+
+### Result
+
+`sig.signature` is the raw signature bytes. For ECDSA this is a
+65-byte recoverable signature (r ‖ s ‖ v); for EdDSA it's the 64-byte
+concatenation. You're responsible for chain-specific encoding from
+here.
+
+</Step>
+
+</Steps>
+
+<Cards>
+  <Card title="Idempotency" href="/docs/guide/authentication" description="Reuse `idempotencyKey` to make sign retries safe." />
+  <Card title="TypeScript reference" href="/docs/typescript" />
+</Cards>

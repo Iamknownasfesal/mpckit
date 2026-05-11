@@ -1,0 +1,103 @@
+---
+title: Crypto engines
+description: InlineCryptoEngine vs WebWorkerCryptoEngine. Pick the one that fits your runtime.
+---
+
+`MpcKit` delegates DKG and centralized-signature math to a
+`CryptoEngine`. Two implementations ship with the SDK.
+
+## `InlineCryptoEngine`
+
+The default. Runs the math on the calling thread. Fine for Node.js
+backends and CLI tools where blocking the event loop briefly is OK.
+
+```ts
+import { MpcKit } from "@mpckit/sdk";
+
+const api = new MpcKit({
+  baseUrl: "https://api.mpckit.xyz",
+  apiKey,
+  network: "testnet",
+  // crypto omitted: InlineCryptoEngine is the default
+});
+```
+
+## `WebWorkerCryptoEngine`
+
+For browsers. Moves the WASM-heavy math off the main thread so DKG and
+signing don't block UI work or animations.
+
+```ts
+import { MpcKit, createWebWorkerCryptoEngine } from "@mpckit/sdk";
+
+const worker = new Worker(
+  new URL("@mpckit/sdk/worker-impl", import.meta.url),
+  { type: "module" },
+);
+
+const api = new MpcKit({
+  baseUrl: "https://api.mpckit.xyz",
+  apiKey,
+  network: "testnet",
+  crypto: createWebWorkerCryptoEngine(worker),
+});
+```
+
+The exact `new Worker(...)` shape is bundler-specific. For React
+applications, the [React SDK provider](/docs/react/provider) handles
+this for you when you set `useWorker: true`.
+
+## Bundler shapes
+
+<Tabs items={["Vite", "Next.js", "Webpack 5"]}>
+
+<Tab value="Vite">
+
+```ts
+new Worker(
+  new URL("@mpckit/sdk/worker-impl", import.meta.url),
+  { type: "module" },
+);
+```
+
+</Tab>
+
+<Tab value="Next.js">
+
+```ts
+new Worker(
+  new URL("@mpckit/sdk/worker-impl", import.meta.url),
+  { type: "module" },
+);
+```
+
+Wrap any code that calls `new Worker(...)` in a `"use client"`
+component. Next.js needs the worker URL resolution to happen on the
+client.
+
+</Tab>
+
+<Tab value="Webpack 5">
+
+```ts
+new Worker(new URL("@mpckit/sdk/worker-impl", import.meta.url));
+```
+
+</Tab>
+
+</Tabs>
+
+## Custom engines
+
+`CryptoEngine` is an interface. Implement it if you want to drive the
+protocol from your own crypto pipeline (FFI, hardware, alternative
+WASM build). The interface is exported from the SDK root:
+
+```ts
+import type { CryptoEngine } from "@mpckit/sdk";
+```
+
+The two methods you implement are `prepareDkg` and `prepareSign`. See
+the type definitions for the exact shape; both take the protocol
+public parameters plus the seed-derived state and return the bytes
+the backend expects.

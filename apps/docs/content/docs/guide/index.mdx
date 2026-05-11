@@ -1,0 +1,42 @@
+---
+title: Guide
+description: Start here. Everything you need to ship a signature, plus the concepts behind every call.
+---
+
+mpckit is a hosted MPC signing layer. One bearer token, every chain
+ika supports, no private keys ever assembled on your servers or ours.
+
+This guide walks you from a fresh API key to a signed transaction, then
+explains the concepts behind it: dWallets, the 2PC-MPC protocol, and
+the curves that map to each chain.
+
+## Where to go next
+
+<Cards>
+  <Card title="Quickstart" href="/docs/guide/quickstart" description="Sign your first message in five minutes." />
+  <Card title="Your first signature" href="/docs/guide/your-first-signature" description="A walk-through of onboard + sign with the bytes you have to keep." />
+  <Card title="Authentication" href="/docs/guide/authentication" description="API keys, seeds, and shares. What goes where." />
+</Cards>
+
+## Concepts
+
+<Cards>
+  <Card title="dWallets" href="/docs/guide/dwallets" description="The on-chain unit of ownership and the local state you persist alongside it." />
+  <Card title="2PC-MPC" href="/docs/guide/mpc" description="Why the full key never reconstructs." />
+  <Card title="Curves and chains" href="/docs/guide/chains" description="What sign() takes and how it maps to every chain." />
+</Cards>
+
+## SDKs
+
+<Cards>
+  <Card title="TypeScript" href="/docs/typescript" description="The MpcKit class. HTTP, billing, dWallets, onboard, and sign." />
+  <Card title="React" href="/docs/react" description="MpcKitProvider plus TanStack Query hooks over MpcKit." />
+  <Card title="Rust" href="/docs/rust" description="Async client for backend services." />
+</Cards>
+
+<Callout title="Live on Sui mainnet">
+  ika is live on Sui mainnet. The 2PC-MPC protocol is documented in
+  [IACR ePrint 2024/253](https://eprint.iacr.org/2024/253) and
+  implemented at
+  [dwallet-labs/ika](https://github.com/dwallet-labs/ika).
+</Callout>

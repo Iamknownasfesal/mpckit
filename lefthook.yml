@@ -1,0 +1,25 @@
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      glob: "*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc}"
+      run: bunx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      stage_fixed: true
+    cargo-fmt:
+      glob: "*.rs"
+      run: cargo fmt --all -- --check
+    cargo-clippy:
+      glob: "*.rs"
+      run: cargo clippy --workspace --all-targets -- -D warnings
+    prettier-move:
+      glob: "packages/ika_api_move/sources/**/*.move"
+      run: npx -y -p @mysten/prettier-plugin-move@0.3.5 prettier-move --write {staged_files}
+      stage_fixed: true
+
+pre-push:
+  parallel: true
+  commands:
+    typecheck:
+      run: bun run typecheck
+    cargo-test:
+      run: cargo test --workspace --no-default-features

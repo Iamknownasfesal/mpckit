@@ -1,0 +1,17 @@
+{
+  "title": "React",
+  "description": "@mpckit/react. Provider plus hooks.",
+  "icon": "Atom",
+  "root": true,
+  "pages": [
+    "index",
+    "provider",
+    "---Hooks---",
+    "queries",
+    "mutations",
+    "imperative",
+    "query-keys",
+    "---Reference---",
+    "re-exports"
+  ]
+}

@@ -1,0 +1,56 @@
+---
+title: Re-exports
+description: Constants, errors, and types re-exported from @mpckit/sdk so you only import from one package.
+---
+
+`@mpckit/react` re-exports the most-used surface from the core
+SDK so you don't have to import from two packages.
+
+## Constants
+
+```tsx
+import {
+  Curve,
+  Hash,
+  SignatureAlgorithm,
+} from "@mpckit/react";
+
+Curve.SECP256K1;
+Hash.SHA256;
+SignatureAlgorithm.ECDSASecp256k1;
+```
+
+See [Curves and chains](/docs/guide/chains) for the valid combinations
+per chain.
+
+## Errors
+
+```tsx
+import {
+  MpcKitError,
+  MpcKitInsufficientCreditsError,
+  MpcKitTimeoutError,
+} from "@mpckit/react";
+```
+
+Same classes as the core SDK; see
+[TypeScript SDK: Errors](/docs/typescript/errors).
+
+## Types
+
+```tsx
+import type {
+  DWallet,
+  EncryptionKey,
+  OnboardArgs,
+  OnboardResult,
+  SignArgs,
+  SignResult,
+  MpcKitOptions,
+  CryptoEngine,
+} from "@mpckit/react";
+```
+
+The full list mirrors the core SDK exports. If you find yourself
+needing something not re-exported, importing from `@mpckit/sdk`
+directly is fine; both packages share types by reference.

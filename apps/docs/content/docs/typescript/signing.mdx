@@ -1,0 +1,87 @@
+---
+title: Signing
+description: api.sign drives the two-party MPC ceremony and returns raw signature bytes.
+---
+
+`sign` runs the centralized signature math locally, posts the user-side
+message, polls until the on-chain sign session completes, and returns
+the raw signature bytes.
+
+```ts
+import { Curve, Hash, SignatureAlgorithm } from "@mpckit/sdk";
+
+const sig = await api.sign({
+  seed,
+  dwalletId,
+  curve: Curve.SECP256K1,
+  signatureAlgorithm: SignatureAlgorithm.ECDSASecp256k1,
+  hashScheme: Hash.SHA256,
+  message: new TextEncoder().encode("hello"),
+  userSecretKeyShareHex,
+  // optional
+  idempotencyKey: "ord_12345",
+  timeoutMs: 180_000,
+});
+
+console.log(sig.signature);     // Uint8Array
+console.log(sig.signRequestId); // backend record id
+console.log(sig.signSessionId); // ika protocol session id
+console.log(sig.txDigest);      // sui tx digest, or null if not finalized yet
+```
+
+## `SignArgs`
+
+<TypeTable
+  type={{
+    seed: { description: "Same 32-byte seed used at onboard time.", type: "Uint8Array" },
+    dwalletId: { description: "DWallet record id from onboard.", type: "string" },
+    curve: { description: "Curve the dWallet was provisioned for.", type: "Curve" },
+    signatureAlgorithm: { description: "ECDSASecp256k1, Taproot, ECDSASecp256r1, EdDSA, or SchnorrkelSubstrate.", type: "SignatureAlgorithm" },
+    hashScheme: { description: "Hash applied before signing.", type: "Hash" },
+    message: { description: "Bytes to sign (or pre-hashed bytes if hashScheme is NONE).", type: "Uint8Array" },
+    userSecretKeyShareHex: { description: "Hex string returned by onboard.", type: "string" },
+    idempotencyKey: { description: "Reuse for retry safety. Auto-generated otherwise.", type: "string" },
+    timeoutMs: { description: "End-to-end sign timeout.", type: "number", default: "180_000" },
+  }}
+/>
+
+## `SignResult`
+
+<TypeTable
+  type={{
+    signature: { description: "Raw signature bytes; chain-specific encoding is your responsibility.", type: "Uint8Array" },
+    signRequestId: { description: "Backend record id for the sign call.", type: "string" },
+    signSessionId: { description: "ika protocol session id (debugging / on-chain trace).", type: "string" },
+    txDigest: { description: "Sui digest of the sign-session tx, or null if not finalized yet.", type: "string | null" },
+  }}
+/>
+
+## What the bytes look like
+
+`sig.signature` is a raw `Uint8Array` in the standard encoding for the
+algorithm you chose: ECDSA returns r ‖ s (with a recovery byte for
+secp256k1), BIP-340 Taproot returns 64 bytes, Ed25519 EdDSA returns
+64 bytes, Schnorrkel returns 64 bytes. Encoding to a chain-native
+format (RLP for EVM, base58 for Solana, Taproot witness for Bitcoin)
+is your responsibility.
+
+## Idempotency
+
+Pass an `idempotencyKey` to make retries safe. The backend
+de-duplicates sign calls keyed on it, so a retried call returns the
+original signature instead of triggering a second sign session. The
+SDK auto-generates one if you don't pass it.
+
+```ts
+import { newIdempotencyKey } from "@mpckit/sdk";
+
+const key = newIdempotencyKey(); // UUID-v7
+
+await api.sign({ /* ... */, idempotencyKey: key });
+// safe to retry on network failure with the same key
+```
+
+<Cards>
+  <Card title="Errors" href="/docs/typescript/errors" description="What to catch when sign fails." />
+  <Card title="Crypto engines" href="/docs/typescript/crypto-engines" description="Move sign math off the main thread in the browser." />
+</Cards>

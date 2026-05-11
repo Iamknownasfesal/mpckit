@@ -1,0 +1,25 @@
+---
+title: Welcome
+description: mpckit is a hosted MPC signing layer. One bearer token, every chain ika supports, no private keys held on your servers or ours.
+---
+
+mpckit lets you sign on every chain ika supports from a single HTTP
+API. The protocol runs as two-party MPC anchored on Sui mainnet; your
+server never touches a full private key, and neither do we.
+
+Pick a section to dive into:
+
+<Cards>
+  <Card title="Guide" href="/docs/guide" description="Quickstart, the signature flow, and the concepts behind every call." />
+  <Card title="TypeScript SDK" href="/docs/typescript" description="The MpcKit class. HTTP, billing, dWallets, onboard, and sign." />
+  <Card title="React SDK" href="/docs/react" description="MpcKitProvider plus TanStack Query hooks over MpcKit." />
+  <Card title="Rust SDK" href="/docs/rust" description="Async client for backend services." />
+  <Card title="Self-hosting" href="/docs/self-hosting" description="Run your own MpcKit instance with Docker or Kubernetes." />
+</Cards>
+
+<Callout title="Live on Sui mainnet">
+  ika is live on Sui mainnet. The 2PC-MPC protocol behind it is
+  documented in [IACR ePrint
+  2024/253](https://eprint.iacr.org/2024/253) and implemented at
+  [dwallet-labs/ika](https://github.com/dwallet-labs/ika).
+</Callout>

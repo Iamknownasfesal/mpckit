@@ -1,0 +1,97 @@
+---
+title: Mutation hooks
+description: TanStack mutation hooks over onboard, sign, and declareDeposit.
+---
+
+Mutation hooks return the standard TanStack shape:
+`{ mutate, mutateAsync, data, error, isPending, reset, ... }`. They do
+**not** auto-invalidate related queries. Pair them with the
+[query keys](/docs/react/query-keys) to refresh balance, dWallet
+list, etc. after a successful call.
+
+## `useOnboard`
+
+Drives DKG end-to-end. Returns a result-typed mutation.
+
+```tsx
+import { useOnboard, Curve } from "@mpckit/react";
+
+const onboard = useOnboard();
+
+async function handleClick() {
+  const result = await onboard.mutateAsync({
+    seed,
+    curve: Curve.SECP256K1,
+  });
+  await db.dwallets.insert({
+    id: result.dwallet.id,
+    userSecretKeyShareHex: result.userSecretKeyShareHex,
+  });
+}
+```
+
+While `onboard.isPending` is true, render a spinner; DKG takes a
+few seconds even on the warm path.
+
+## `useSign`
+
+Drives a sign ceremony. Returns the raw signature bytes plus the
+backend record id.
+
+```tsx
+import {
+  useSign,
+  Curve,
+  Hash,
+  SignatureAlgorithm,
+} from "@mpckit/react";
+
+const sign = useSign();
+
+const sig = await sign.mutateAsync({
+  seed,
+  dwalletId,
+  curve: Curve.SECP256K1,
+  signatureAlgorithm: SignatureAlgorithm.ECDSASecp256k1,
+  hashScheme: Hash.SHA256,
+  message,
+  userSecretKeyShareHex,
+});
+```
+
+Pass `idempotencyKey` to make sign safe to retry. See
+[Idempotency](/docs/typescript/signing#idempotency).
+
+## `useDeclareDeposit`
+
+Credits a Sui-side deposit to the project balance.
+
+```tsx
+import { useDeclareDeposit } from "@mpckit/react";
+
+const declare = useDeclareDeposit();
+
+declare.mutate(txDigest, {
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: mpcKitQueryKeys.balance() });
+  },
+});
+```
+
+Always invalidate `balance()` and `billingHistory()` on success so the
+user sees their topped-up balance immediately.
+
+## Refresh patterns
+
+```tsx
+import { useQueryClient } from "@tanstack/react-query";
+import { mpcKitQueryKeys, useOnboard } from "@mpckit/react";
+
+const qc = useQueryClient();
+const onboard = useOnboard({
+  onSuccess: () => {
+    qc.invalidateQueries({ queryKey: mpcKitQueryKeys.dwallets() });
+    qc.invalidateQueries({ queryKey: mpcKitQueryKeys.balance() });
+  },
+});
+```

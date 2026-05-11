@@ -1,0 +1,94 @@
+# Backend Deployment (PROCESS_TYPE=both). Splitting into separate
+# api/worker Deployments is a follow-up; the boot warmup is idempotent
+# across replicas so this scales horizontally as-is.
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: mpckit
+spec:
+  selector:
+    app.kubernetes.io/name: backend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: mpckit
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: backend
+    spec:
+      imagePullSecrets:
+        - name: ghcr
+      containers:
+        - name: backend
+          image: ghcr.io/dwallet-labs/mpckit-backend:latest
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: mpckit-config
+            - secretRef:
+                name: mpckit-secrets
+          env:
+            - name: PORT
+              value: "3000"
+            - name: NODE_ENV
+              value: production
+            - name: PROCESS_TYPE
+              value: "both"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mpckit-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              value: redis://redis:6379
+            - name: SUI_GAS_STATION_TESTNET_URL
+              value: http://gas-station-testnet:9527
+            - name: SUI_GAS_STATION_MAINNET_URL
+              value: http://gas-station-mainnet:9527
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          # Graceful shutdown: terminus drains in-flight requests on
+          # SIGTERM, pg-boss waits for handlers to settle. 30s covers
+          # the slowest sign path comfortably.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+      terminationGracePeriodSeconds: 60
