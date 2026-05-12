@@ -1,6 +1,6 @@
 {
-  ".": "0.2.1",
-  "packages/core": "0.2.1",
-  "packages/sdk-ts": "0.2.1",
-  "packages/sdk-react": "0.2.1"
+  ".": "0.3.0",
+  "packages/core": "0.3.0",
+  "packages/sdk-ts": "0.3.0",
+  "packages/sdk-react": "0.3.0"
 }

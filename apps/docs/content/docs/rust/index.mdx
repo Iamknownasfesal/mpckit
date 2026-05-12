@@ -13,11 +13,11 @@ feature once the upstream Rust crate is wired in.
 ## At a glance
 
 ```rust
-use mpckit::{MpcKit, Curve, Network};
+use mpckit::{MPCKit, Curve, Network};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let api = MpcKit::builder()
+    let api = MPCKit::builder()
         .base_url("https://api.mpckit.xyz")
         .api_key(std::env::var("MPCKIT_API_KEY")?)
         .network(Network::Testnet)
@@ -42,6 +42,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   <Card title="Low-level onboarding" href="/docs/rust/low-level-onboarding" description="Drive DKG step by step from your own crypto pipeline." />
   <Card title="Low-level signing" href="/docs/rust/low-level-signing" description="The two-phase sign API: prepare, submit, poll." />
   <Card title="High-level (crypto feature)" href="/docs/rust/high-level-crypto" description="onboard / sign once the crypto feature lands." />
-  <Card title="Errors" href="/docs/rust/errors" description="The MpcKitError variants and how to match them." />
+  <Card title="Errors" href="/docs/rust/errors" description="The MPCKitError variants and how to match them." />
   <Card title="Utilities" href="/docs/rust/utilities" description="Idempotency keys and shared helpers." />
 </Cards>

@@ -6,12 +6,12 @@
 
 const STRIP_TRAILING = (s: string) => s.replace(/\/$/, "");
 
-export const SITE_NAME = "MpcKit";
+export const SITE_NAME = "MPCKit";
 
 export const SITE_TAGLINE = "Console";
 
 export const SITE_DESCRIPTION =
-  "Manage API keys, billing, and dWallets for your MpcKit account.";
+  "Manage API keys, billing, and dWallets for your MPCKit account.";
 
 export const SITE_URL = STRIP_TRAILING(
   process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://app.mpckit.xyz",

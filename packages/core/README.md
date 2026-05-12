@@ -1,6 +1,6 @@
 # @mpckit/core
 
-Shared types and BCS schemas used by the [MpcKit](https://mpckit.xyz)
+Shared types and BCS schemas used by the [MPCKit](https://mpckit.xyz)
 TypeScript SDK. Most consumers don't depend on this directly:
 [`@mpckit/sdk`](https://www.npmjs.com/package/@mpckit/sdk) and
 [`@mpckit/react`](https://www.npmjs.com/package/@mpckit/react) re-export
@@ -9,7 +9,7 @@ everything you need.
 Pull this in directly if you're:
 
 - building a custom HTTP client and need the wire types
-- decoding raw BCS payloads from MpcKit responses outside the SDK
+- decoding raw BCS payloads from MPCKit responses outside the SDK
 - writing tests that fixture against the typed contract
 
 ## Install

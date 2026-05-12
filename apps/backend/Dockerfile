@@ -50,7 +50,7 @@ FROM oven/bun:${BUN_VERSION}-alpine AS runtime
 # image.source links the package to its origin repo on ghcr.io so the
 # repo's workflow token gets write access on subsequent pushes.
 LABEL org.opencontainers.image.source="https://github.com/iamknownasfesal/mpckit"
-LABEL org.opencontainers.image.description="MpcKit backend (Bun + Elysia + pg-boss)"
+LABEL org.opencontainers.image.description="MPCKit backend (Bun + Elysia + pg-boss)"
 LABEL org.opencontainers.image.licenses="BSD-3-Clause"
 WORKDIR /app
 

@@ -4,22 +4,22 @@
  * dwallet list and balance queries so consumers see the new dwallet
  * and the credit charge without manual refetching.
  */
-import type { MpcKitError, OnboardArgs, OnboardResult } from "@mpckit/sdk";
+import type { MPCKitError, OnboardArgs, OnboardResult } from "@mpckit/sdk";
 import {
   type UseMutationOptions,
   type UseMutationResult,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useMpcKit } from "../provider";
+import { useMPCKit } from "../provider";
 import { mpcKitQueryKeys } from "../query-keys";
 
-type Options = UseMutationOptions<OnboardResult, MpcKitError, OnboardArgs>;
+type Options = UseMutationOptions<OnboardResult, MPCKitError, OnboardArgs>;
 
 export function useOnboard(
   opts?: Options,
-): UseMutationResult<OnboardResult, MpcKitError, OnboardArgs> {
-  const api = useMpcKit();
+): UseMutationResult<OnboardResult, MPCKitError, OnboardArgs> {
+  const api = useMPCKit();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: OnboardArgs) => api.onboard(args),

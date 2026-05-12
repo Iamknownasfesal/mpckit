@@ -43,7 +43,7 @@ RUN cd apps/docs && bun run postinstall && bun run build
 # ---- runtime stage ----------------------------------------------------
 FROM node:${NODE_VERSION} AS runtime
 LABEL org.opencontainers.image.source="https://github.com/iamknownasfesal/mpckit"
-LABEL org.opencontainers.image.description="MpcKit docs (Next.js 15 + Fumadocs)"
+LABEL org.opencontainers.image.description="MPCKit docs (Next.js 15 + Fumadocs)"
 LABEL org.opencontainers.image.licenses="BSD-3-Clause"
 WORKDIR /app
 

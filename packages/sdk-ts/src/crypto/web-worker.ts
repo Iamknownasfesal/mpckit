@@ -6,18 +6,18 @@
  *
  * Consumer side, typical shape:
  *
- *   import { MpcKit, createWebWorkerCryptoEngine } from "@mpckit/sdk";
+ *   import { MPCKit, createWebWorkerCryptoEngine } from "@mpckit/sdk";
  *   const worker = new Worker(
  *     new URL("@mpckit/sdk/worker-impl", import.meta.url),
  *     { type: "module" }
  *   );
- *   const api = new MpcKit({
+ *   const api = new MPCKit({
  *     ...config,
  *     crypto: createWebWorkerCryptoEngine(worker),
  *   });
  */
 import type { Curve, Hash, SignatureAlgorithm } from "../constants";
-import { MpcKitError } from "../errors";
+import { MPCKitError } from "../errors";
 import type { CryptoEngine, DKGOutput, KeySession } from "./engine";
 import type { RpcRequest, RpcResponse } from "./rpc";
 
@@ -99,7 +99,7 @@ export class WebWorkerCryptoEngine implements CryptoEngine {
   terminate(): void {
     for (const [, p] of this.pending) {
       p.reject(
-        new MpcKitError("worker terminated", 0, "WORKER_TERMINATED", null),
+        new MPCKitError("worker terminated", 0, "WORKER_TERMINATED", null),
       );
     }
     this.pending.clear();
@@ -126,7 +126,7 @@ export class WebWorkerCryptoEngine implements CryptoEngine {
     if (data.ok) {
       pending.resolve(data.result);
     } else {
-      const err = new MpcKitError(
+      const err = new MPCKitError(
         data.error.message,
         500,
         data.error.name,
@@ -137,7 +137,7 @@ export class WebWorkerCryptoEngine implements CryptoEngine {
   }
 
   private onError(e: ErrorEvent): void {
-    const err = new MpcKitError(
+    const err = new MPCKitError(
       `worker error: ${e.message}`,
       500,
       "WORKER_ERROR",

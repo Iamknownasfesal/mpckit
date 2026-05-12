@@ -1827,7 +1827,7 @@ dependencies = [
 
 [[package]]
 name = "mpckit"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base64",
  "crypto-bigint 0.7.0-rc.9",
@@ -1850,7 +1850,7 @@ dependencies = [
 
 [[package]]
 name = "mpckit-example-rust-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "hex",
  "mpckit",

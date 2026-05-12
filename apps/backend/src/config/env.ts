@@ -46,7 +46,7 @@ const Schema = z.object({
 
   /**
    * Self-host opt-in: when true, expose the shared-dWallet DKG path.
-   * Default false. Hosted MpcKit is non-custodial; only operators who
+   * Default false. Hosted MPCKit is non-custodial; only operators who
    * explicitly take custodial responsibility should turn this on.
    */
   ALLOW_SHARED_DWALLETS: z

@@ -47,7 +47,7 @@ function buildSiwsMessage(opts: {
     `${opts.domain} wants you to sign in with your Sui account:`,
     opts.address,
     "",
-    "Sign in to MpcKit. This request does not authorise any on-chain",
+    "Sign in to MPCKit. This request does not authorise any on-chain",
     "transaction; it only proves wallet ownership.",
     "",
     `Domain: ${opts.domain}`,

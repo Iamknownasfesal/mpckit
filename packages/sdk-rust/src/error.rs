@@ -1,12 +1,12 @@
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, MpcKitError>;
+pub type Result<T> = std::result::Result<T, MPCKitError>;
 
 /// Backend error envelope. Returned for any non-2xx response. We
 /// preserve `code` and the raw body so callers can branch on
 /// `INSUFFICIENT_CREDITS`, `RATE_LIMITED`, etc., without re-parsing.
 #[derive(Debug, Error)]
-pub enum MpcKitError {
+pub enum MPCKitError {
     #[error("HTTP error {status} ({code}): {message}")]
     Http {
         status: u16,
@@ -42,7 +42,7 @@ pub enum MpcKitError {
     Crypto(String),
 }
 
-impl MpcKitError {
+impl MPCKitError {
     pub fn code(&self) -> Option<&str> {
         match self {
             Self::Http { code, .. } => Some(code),

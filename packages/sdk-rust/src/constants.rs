@@ -9,7 +9,7 @@ pub enum Network {
 }
 
 impl Network {
-    /// Hosted MpcKit base URL for this network. The Rust builder
+    /// Hosted MPCKit base URL for this network. The Rust builder
     /// uses this when `base_url(...)` is not set explicitly.
     pub fn default_base_url(self) -> &'static str {
         match self {

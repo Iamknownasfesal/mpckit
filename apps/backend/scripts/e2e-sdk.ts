@@ -31,7 +31,7 @@
  * Usage:
  *   bun run scripts/e2e-sdk.ts
  */
-import { Curve, Hash, MpcKit, SignatureAlgorithm } from "@mpckit/sdk";
+import { Curve, Hash, MPCKit, SignatureAlgorithm } from "@mpckit/sdk";
 import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import { getJsonRpcFullnodeUrl, SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
@@ -186,7 +186,7 @@ async function main() {
     console.error(`[e2e] created user ${userId}`);
   }
 
-  const api = new MpcKit({
+  const api = new MPCKit({
     baseUrl: env.backendUrl,
     apiKey,
     network: env.network,

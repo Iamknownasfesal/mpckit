@@ -1,6 +1,6 @@
 [package]
 name = "mpckit"
-description = "Rust SDK for MpcKit — hosted MPC signing for Sui dWallets."
+description = "Rust SDK for MPCKit — hosted MPC signing for Sui dWallets."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -14,8 +14,8 @@ categories = ["cryptography", "api-bindings"]
 [features]
 default = []
 # Enables the `crypto` module (`UserShareEncryptionKeys`, `prepare_dkg`,
-# `centralized_sign`) and the high-level `MpcKit::onboard` /
-# `MpcKit::sign` ceremonies. Pulls in the dwallet-labs/ika native
+# `centralized_sign`) and the high-level `MPCKit::onboard` /
+# `MPCKit::sign` ceremonies. Pulls in the dwallet-labs/ika native
 # crypto crates + a `[patch.crates-io]` block from the workspace; the
 # default build is HTTP-only and stays light.
 #

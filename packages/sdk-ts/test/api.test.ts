@@ -1,5 +1,5 @@
 /**
- * Behavioural tests for `MpcKit`. Bun's module mocking is process-
+ * Behavioural tests for `MPCKit`. Bun's module mocking is process-
  * global, so onboard + sign cases live in one file rather than
  * leaking partial `@ika.xyz/sdk` stubs across test files.
  *
@@ -58,7 +58,7 @@ mock.module("@ika.xyz/sdk", () => ({
 }));
 mock.module("@mysten/sui/grpc", () => ({ SuiGrpcClient: class {} }));
 
-const { MpcKit } = await import("../src/api");
+const { MPCKit } = await import("../src/api");
 const { Curve, Hash, SignatureAlgorithm } = await import("../src/constants");
 
 const OPERATOR = "0xOPERATOR_ADDRESS";
@@ -120,12 +120,12 @@ function fakeEngine(captures: {
   };
 }
 
-describe("MpcKit.onboard", () => {
+describe("MPCKit.onboard", () => {
   test("threads operatorAddress from /v1/network into prepareDKG", async () => {
     const captures = { prepareDKG: [], signCentralized: [] } as Parameters<
       typeof fakeEngine
     >[0];
-    const api = new MpcKit({
+    const api = new MPCKit({
       baseUrl: "http://localhost:0",
       apiKey: "test",
       network: "testnet",
@@ -196,7 +196,7 @@ describe("MpcKit.onboard", () => {
   });
 });
 
-describe("MpcKit.sign", () => {
+describe("MPCKit.sign", () => {
   test("uses dwallet Active.public_output, not user-side DKG output", async () => {
     const captures = { prepareDKG: [], signCentralized: [] } as Parameters<
       typeof fakeEngine
@@ -213,7 +213,7 @@ describe("MpcKit.sign", () => {
       updatedAt: "2026-05-08T00:00:00Z",
       completedAt: "2026-05-08T00:00:00Z",
     };
-    const api = new MpcKit({
+    const api = new MPCKit({
       baseUrl: "http://localhost:0",
       apiKey: "test",
       network: "testnet",

@@ -152,7 +152,7 @@ function SidebarRail({ pathname }: { pathname: string }) {
           size={24}
           className="text-foreground transition-transform group-hover:scale-105"
         />
-        <span className="text-[15px] font-semibold tracking-tight">MpcKit</span>
+        <span className="text-[15px] font-semibold tracking-tight">MPCKit</span>
         <span className="ml-auto inline-flex items-center rounded-full border bg-card/60 px-2 py-0.5 t-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
           v1
         </span>
@@ -223,7 +223,7 @@ function MobileNav({
         className="flex h-16 shrink-0 items-center gap-2.5 border-b px-5"
       >
         <Mark size={24} />
-        <span className="text-[15px] font-semibold tracking-tight">MpcKit</span>
+        <span className="text-[15px] font-semibold tracking-tight">MPCKit</span>
       </Link>
       <div className="px-3 pt-4">
         <NetworkBadge />

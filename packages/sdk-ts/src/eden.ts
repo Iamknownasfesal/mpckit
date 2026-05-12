@@ -5,7 +5,7 @@
  * App's TypeScript type at compile time.
  *
  * Use this when you want raw HTTP with end-to-end type safety. The
- * ceremony orchestrators (`onboard`, `sign`) still live on `MpcKit`
+ * ceremony orchestrators (`onboard`, `sign`) still live on `MPCKit`
  * because they coordinate WASM crypto with multiple HTTP calls; treaty
  * only handles the wire boundary.
  *
@@ -42,7 +42,7 @@ export interface EdenClientOptions {
    * so the same shape works for tests (mocked transports), bun's
    * global fetch, and runtimes that polyfill fetch. The treaty config
    * field is named `fetcher`; we expose it as `fetch` to match the
-   * conventional name on `MpcKit` and the rest of this SDK.
+   * conventional name on `MPCKit` and the rest of this SDK.
    */
   fetch?: typeof fetch;
 }

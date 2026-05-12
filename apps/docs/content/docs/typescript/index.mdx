@@ -1,23 +1,23 @@
 ---
 title: TypeScript SDK
-description: Overview of @mpckit/sdk. One MpcKit class for every chain ika supports.
+description: Overview of @mpckit/sdk. One MPCKit class for every chain ika supports.
 ---
 
-`@mpckit/sdk` exposes a single `MpcKit` class. It composes a typed
+`@mpckit/sdk` exposes a single `MPCKit` class. It composes a typed
 HTTP client, a `CryptoEngine` for the WASM-heavy DKG and centralized
 signature math, and a lazily-built on-chain reader for protocol
 public parameters.
 
-Consumers never need to import `@ika.xyz/sdk` directly. `MpcKit` wraps
+Consumers never need to import `@ika.xyz/sdk` directly. `MPCKit` wraps
 everything.
 
 ## At a glance
 
 ```ts
-import { MpcKit, Curve, Hash, SignatureAlgorithm } from "@mpckit/sdk";
+import { MPCKit, Curve, Hash, SignatureAlgorithm } from "@mpckit/sdk";
 import { randomBytes } from "node:crypto";
 
-const api = new MpcKit({
+const api = new MPCKit({
   baseUrl: "https://api.mpckit.xyz",
   apiKey: process.env.MPCKIT_API_KEY!,
   network: "testnet",
@@ -44,7 +44,7 @@ const sig = await api.sign({
 ## Where to go next
 
 <Cards>
-  <Card title="Setup" href="/docs/typescript/setup" description="Install, construct, and configure MpcKit." />
+  <Card title="Setup" href="/docs/typescript/setup" description="Install, construct, and configure MPCKit." />
   <Card title="Onboarding" href="/docs/typescript/onboarding" description="DKG end-to-end via api.onboard." />
   <Card title="Signing" href="/docs/typescript/signing" description="Producing a raw signature with api.sign." />
   <Card title="dWallets" href="/docs/typescript/dwallets" description="Listing, fetching, and the DWallet shape." />

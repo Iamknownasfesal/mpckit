@@ -1,7 +1,7 @@
 {
   "name": "@mpckit/sdk",
-  "version": "0.2.1",
-  "description": "MpcKit TypeScript SDK — hosted MPC signing for Sui dWallets.",
+  "version": "0.3.0",
+  "description": "MPCKit TypeScript SDK — hosted MPC signing for Sui dWallets.",
   "license": "BSD-3-Clause",
   "author": "fesal <fesal@dwalletlabs.com>",
   "homepage": "https://mpckit.xyz",

@@ -36,7 +36,7 @@ println!("latest enc key={}", info.latest_encryption_key.id);
 
 Returns the on-chain protocol public parameters for the given curve as
 `Vec<u8>`. The result is cached after the first read; the cache lives
-in the `MpcKit` instance, so cloning shares it. To force a refresh:
+in the `MPCKit` instance, so cloning shares it. To force a refresh:
 
 ```rust
 api.invalidate_protocol_parameters_cache().await;

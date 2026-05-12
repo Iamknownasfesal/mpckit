@@ -9,7 +9,7 @@ import {
   Curve,
   createWebWorkerCryptoEngine,
   Hash,
-  MpcKit,
+  MPCKit,
   SignatureAlgorithm,
 } from "@mpckit/sdk";
 
@@ -38,7 +38,7 @@ async function main() {
   );
   const crypto = createWebWorkerCryptoEngine(worker);
 
-  const api = new MpcKit({
+  const api = new MPCKit({
     baseUrl,
     apiKey,
     network: "testnet",

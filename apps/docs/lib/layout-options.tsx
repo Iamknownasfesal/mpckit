@@ -7,7 +7,7 @@ export const baseOptions: BaseLayoutProps = {
     title: (
       <span className="inline-flex items-center gap-2">
         <Mark size={20} />
-        <span className="font-semibold tracking-tight">MpcKit</span>
+        <span className="font-semibold tracking-tight">MPCKit</span>
       </span>
     ),
   },

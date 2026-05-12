@@ -175,7 +175,7 @@ export default function SignInPage() {
               <div className="flex items-center gap-3">
                 <Mark size={32} />
                 <span className="text-base font-semibold tracking-tight">
-                  MpcKit
+                  MPCKit
                 </span>
               </div>
               <StatusPill tone="live" pulse>

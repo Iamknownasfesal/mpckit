@@ -8,7 +8,7 @@ mainnet using the 2PC-MPC protocol; the SDK accepts either `mainnet` or
 `testnet` so you can sandbox the integration before flipping the switch.
 The TypeScript SDK is a thin client over `api.mpckit.xyz`; everything below
 mirrors what the HTTP API does, with the DKG and centralized-signature
-crypto running locally inside `MpcKit`.
+crypto running locally inside `MPCKit`.
 
 <Steps>
 
@@ -69,9 +69,9 @@ yarn add @mpckit/sdk
 ### Construct the client
 
 ```ts title="ika.ts"
-import { MpcKit } from "@mpckit/sdk";
+import { MPCKit } from "@mpckit/sdk";
 
-export const api = new MpcKit({
+export const api = new MPCKit({
   baseUrl: "https://api.mpckit.xyz",
   apiKey: process.env.MPCKIT_API_KEY!,
   network: "testnet",
@@ -80,7 +80,7 @@ export const api = new MpcKit({
 console.log(await api.health()); // { ok: true, service: "ika-api", … }
 ```
 
-`MpcKit` is a single class with all methods on it. `network` is
+`MPCKit` is a single class with all methods on it. `network` is
 `"testnet"` or `"mainnet"`; the matching default Sui fullnode is used
 for on-chain reads unless you pass `suiRpcUrl`.
 

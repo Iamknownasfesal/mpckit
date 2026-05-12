@@ -22,12 +22,12 @@ Tokens are issued in the dashboard, scoped to one project, and rotate on
 demand. They authorize *what your project can do*; they do not on
 their own authorize signing for any particular dWallet.
 
-The SDK reads the key from `MpcKitOptions.apiKey`:
+The SDK reads the key from `MPCKitOptions.apiKey`:
 
 ```ts
-import { MpcKit } from "@mpckit/sdk";
+import { MPCKit } from "@mpckit/sdk";
 
-const api = new MpcKit({
+const api = new MPCKit({
   baseUrl: "https://api.mpckit.xyz",
   apiKey: process.env.MPCKIT_API_KEY!,
   network: "testnet",

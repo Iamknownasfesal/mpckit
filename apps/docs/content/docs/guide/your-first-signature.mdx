@@ -11,7 +11,7 @@ local, and what you must persist.
 
 You're going to:
 
-1. Construct an `MpcKit` client with a testnet API key.
+1. Construct an `MPCKit` client with a testnet API key.
 2. Onboard a SECP256K1 zero-trust dWallet (DKG runs end-to-end).
 3. Sign an arbitrary message with that dWallet using ECDSA + SHA-256.
 
@@ -21,16 +21,16 @@ Codes are TypeScript. The Rust SDK has the same shapes; see
 ## Stage 1. Construct the client
 
 ```ts title="ika.ts"
-import { MpcKit } from "@mpckit/sdk";
+import { MPCKit } from "@mpckit/sdk";
 
-export const api = new MpcKit({
+export const api = new MPCKit({
   baseUrl: "https://api.mpckit.xyz",
   apiKey: process.env.MPCKIT_API_KEY!,
   network: "testnet",
 });
 ```
 
-`MpcKit` composes a typed HTTP client, a `CryptoEngine` (default:
+`MPCKit` composes a typed HTTP client, a `CryptoEngine` (default:
 `InlineCryptoEngine`, runs on the calling thread), and a lazily-built
 on-chain reader for protocol public parameters.
 

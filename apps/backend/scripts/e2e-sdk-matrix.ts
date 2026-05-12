@@ -29,8 +29,8 @@ import { createHash } from "node:crypto";
 import {
   Curve,
   Hash,
-  MpcKit,
-  MpcKitError,
+  MPCKit,
+  MPCKitError,
   SignatureAlgorithm,
 } from "@mpckit/sdk";
 
@@ -204,7 +204,7 @@ const SKIP_CURVES = new Set<string>(
 );
 
 async function signWithRetry(
-  api: MpcKit,
+  api: MPCKit,
   args: {
     seed: Uint8Array;
     dwalletId: string;
@@ -224,7 +224,7 @@ async function signWithRetry(
       return { result, attempts: attempt };
     } catch (err) {
       if (
-        err instanceof MpcKitError &&
+        err instanceof MPCKitError &&
         err.code === "PRESIGN_POOL_EMPTY" &&
         attempt < PRESIGN_MAX_RETRIES
       ) {
@@ -257,7 +257,7 @@ async function main() {
     console.error(`[matrix] created user ${userId}`);
   }
 
-  const api = new MpcKit({
+  const api = new MPCKit({
     baseUrl: env.backendUrl,
     apiKey,
     network: env.network,
@@ -305,7 +305,7 @@ async function main() {
       );
     } catch (err) {
       const msg =
-        err instanceof MpcKitError
+        err instanceof MPCKitError
           ? `${err.code}: ${err.message}`
           : String(err);
       console.error(`[matrix] onboard ${curveStr} FAILED: ${msg}`);
@@ -357,8 +357,8 @@ async function main() {
             : `got ${result.signature.length}, expected one of ${combo.expectedSigBytes.join(",")}`,
         });
       } catch (err) {
-        const code = err instanceof MpcKitError ? err.code : "UNKNOWN";
-        const message = err instanceof MpcKitError ? err.message : String(err);
+        const code = err instanceof MPCKitError ? err.code : "UNKNOWN";
+        const message = err instanceof MPCKitError ? err.message : String(err);
         console.error(`[matrix] FAILED ${combo.name}: ${code}: ${message}`);
         results.push({
           combo,

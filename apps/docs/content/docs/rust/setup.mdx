@@ -19,11 +19,11 @@ to be available; check the crate README for current feature flags.
 ## Build the client
 
 ```rust title="main.rs"
-use mpckit::{MpcKit, Network};
+use mpckit::{MPCKit, Network};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let api = MpcKit::builder()
+    let api = MPCKit::builder()
         .base_url("https://api.mpckit.xyz")
         .api_key(std::env::var("MPCKIT_API_KEY")?)
         .network(Network::Testnet)
@@ -50,12 +50,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Sharing the client
 
-`MpcKit` is `Clone` and internally uses an `Arc`-shared `reqwest::Client`,
+`MPCKit` is `Clone` and internally uses an `Arc`-shared `reqwest::Client`,
 so the recommended pattern is to build once at startup and `clone()` for
 each spawned task or handler:
 
 ```rust
-let api = MpcKit::builder()/* ... */.build()?;
+let api = MPCKit::builder()/* ... */.build()?;
 
 // in axum/actix/tower handlers
 let api = api.clone();

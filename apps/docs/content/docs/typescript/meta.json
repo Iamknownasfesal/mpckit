@@ -1,6 +1,6 @@
 {
   "title": "TypeScript",
-  "description": "@mpckit/sdk. The MpcKit class, every method.",
+  "description": "@mpckit/sdk. The MPCKit class, every method.",
   "icon": "FileCode",
   "root": true,
   "pages": [

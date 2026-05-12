@@ -1,7 +1,7 @@
-//! HTTP client for MpcKit. Mirrors the TS SDK's
-//! `MpcKit` surface: introspection, billing, dwallets, sign. Methods
+//! HTTP client for MPCKit. Mirrors the TS SDK's
+//! `MPCKit` surface: introspection, billing, dwallets, sign. Methods
 //! return strongly-typed deserialised responses; non-2xx responses
-//! map to [`crate::MpcKitError`] preserving the wire `code` so
+//! map to [`crate::MPCKitError`] preserving the wire `code` so
 //! callers can branch on `INSUFFICIENT_CREDITS`, `RATE_LIMITED`, etc.
 
 use std::collections::HashMap;
@@ -19,7 +19,7 @@ use url::Url;
 use uuid::Uuid;
 
 use crate::constants::{Curve, Network};
-use crate::error::{MpcKitError, Result};
+use crate::error::{MPCKitError, Result};
 use crate::types::{
     AcceptDWalletResponse, BillingHistory, BillingPricing, DWalletResponse, DepositAddress,
     DepositDeclareResponse, DwalletList, EncryptionKey, EncryptionKeyCreate, Health, NetworkInfo,
@@ -29,9 +29,9 @@ use crate::types::{
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// Async client for MpcKit.
+/// Async client for MPCKit.
 #[derive(Debug, Clone)]
-pub struct MpcKit {
+pub struct MPCKit {
     inner: Client,
     base_url: Url,
     network: Network,
@@ -43,9 +43,9 @@ pub struct MpcKit {
     protocol_parameters_cache: Arc<RwLock<HashMap<Curve, Vec<u8>>>>,
 }
 
-impl MpcKit {
-    pub fn builder() -> MpcKitBuilder {
-        MpcKitBuilder::default()
+impl MPCKit {
+    pub fn builder() -> MPCKitBuilder {
+        MPCKitBuilder::default()
     }
 
     pub fn network(&self) -> Network {
@@ -88,7 +88,7 @@ impl MpcKit {
             .request_json(Method::GET, &path, None::<&()>, None)
             .await?;
         let bytes = BASE64.decode(res.bytes_base64.as_bytes()).map_err(|e| {
-            MpcKitError::Invalid(format!("invalid base64 in protocol-parameters: {e}"))
+            MPCKitError::Invalid(format!("invalid base64 in protocol-parameters: {e}"))
         })?;
         self.protocol_parameters_cache
             .write()
@@ -258,7 +258,7 @@ impl MpcKit {
     // ---- High-level ceremonies (crypto feature) ------------------------
 
     /// Drive the full zero-trust DKG + accept ceremony end-to-end.
-    /// Mirrors the TS SDK's `MpcKit.onboard()`: derives keys from the
+    /// Mirrors the TS SDK's `MPCKit.onboard()`: derives keys from the
     /// seed, registers the encryption key, runs the local DKG step,
     /// submits the on-chain dwallet, polls the SDK-side
     /// `getDWallet` endpoint until the network finalises the dwallet's
@@ -348,7 +348,7 @@ impl MpcKit {
     }
 
     /// Drive the two-phase sign ceremony end-to-end. Mirrors the TS
-    /// SDK's `MpcKit.sign()`: reserves a presign, computes the
+    /// SDK's `MPCKit.sign()`: reserves a presign, computes the
     /// centralized signature locally over the dwallet's *active*
     /// public output, submits phase 2, and polls until completion.
     #[cfg(feature = "crypto")]
@@ -395,9 +395,9 @@ impl MpcKit {
 
         // Phase 1.5: WASM-equivalent centralized signature.
         let presign_bytes = hex::decode(&prepared.presign_bytes_hex)
-            .map_err(|e| MpcKitError::Invalid(format!("invalid presign hex from backend: {e}")))?;
+            .map_err(|e| MPCKitError::Invalid(format!("invalid presign hex from backend: {e}")))?;
         let user_secret = hex::decode(args.user_secret_key_share_hex)
-            .map_err(|e| MpcKitError::Invalid(format!("invalid user_secret_key_share_hex: {e}")))?;
+            .map_err(|e| MPCKitError::Invalid(format!("invalid user_secret_key_share_hex: {e}")))?;
         let centralized_sig = centralized_sign(
             &protocol_pp,
             &dwallet_public_output,
@@ -430,10 +430,10 @@ impl MpcKit {
             )
             .await?;
         let signature_hex = final_req.signature_hex.clone().ok_or_else(|| {
-            MpcKitError::Invalid("sign completed but signature_hex is null".into())
+            MPCKitError::Invalid("sign completed but signature_hex is null".into())
         })?;
         let signature = hex::decode(&signature_hex)
-            .map_err(|e| MpcKitError::Invalid(format!("invalid signature hex: {e}")))?;
+            .map_err(|e| MPCKitError::Invalid(format!("invalid signature hex: {e}")))?;
         Ok(SignResult {
             signature,
             sign_request_id: final_req.id.clone(),
@@ -461,7 +461,7 @@ impl MpcKit {
             .strip_prefix("0x")
             .unwrap_or(&state.public_output_hex);
         hex::decode(stripped).map_err(|e| {
-            MpcKitError::Invalid(format!("invalid public_output hex from backend: {e}"))
+            MPCKitError::Invalid(format!("invalid public_output hex from backend: {e}"))
         })
     }
 
@@ -479,7 +479,7 @@ impl MpcKit {
             match req.status {
                 SignRequestStatus::Completed => return Ok(req),
                 SignRequestStatus::Failed => {
-                    return Err(MpcKitError::Http {
+                    return Err(MPCKitError::Http {
                         status: 422,
                         code: req
                             .error_code
@@ -495,7 +495,7 @@ impl MpcKit {
                 _ => {}
             }
             if std::time::Instant::now() >= deadline {
-                return Err(MpcKitError::Timeout(format!(
+                return Err(MPCKitError::Timeout(format!(
                     "sign {sign_request_id} did not terminate within {}ms",
                     timeout.as_millis()
                 )));
@@ -529,7 +529,7 @@ impl MpcKit {
         let status = res.status();
         let bytes = res.bytes().await?;
         if status.is_success() {
-            return serde_json::from_slice(&bytes).map_err(MpcKitError::from);
+            return serde_json::from_slice(&bytes).map_err(MPCKitError::from);
         }
         Err(error_from_response(status, &bytes))
     }
@@ -551,7 +551,7 @@ pub struct Balance {
     pub credits_usd: String,
 }
 
-fn error_from_response(status: StatusCode, bytes: &[u8]) -> MpcKitError {
+fn error_from_response(status: StatusCode, bytes: &[u8]) -> MPCKitError {
     let body: serde_json::Value = serde_json::from_slice(bytes).unwrap_or(serde_json::Value::Null);
     let code = body
         .get("code")
@@ -564,9 +564,9 @@ fn error_from_response(status: StatusCode, bytes: &[u8]) -> MpcKitError {
         .unwrap_or("request failed")
         .to_owned();
     if status.as_u16() == 402 {
-        return MpcKitError::InsufficientCredits { message, body };
+        return MPCKitError::InsufficientCredits { message, body };
     }
-    MpcKitError::Http {
+    MPCKitError::Http {
         status: status.as_u16(),
         code,
         message,
@@ -591,9 +591,9 @@ fn urlencoding(s: &str) -> String {
     out
 }
 
-/// Builder for [`MpcKit`].
+/// Builder for [`MPCKit`].
 #[derive(Default, Debug, Clone)]
-pub struct MpcKitBuilder {
+pub struct MPCKitBuilder {
     base_url: Option<String>,
     api_key: Option<String>,
     network: Option<Network>,
@@ -601,7 +601,7 @@ pub struct MpcKitBuilder {
     user_agent: Option<String>,
 }
 
-impl MpcKitBuilder {
+impl MPCKitBuilder {
     pub fn base_url<S: Into<String>>(mut self, base_url: S) -> Self {
         self.base_url = Some(base_url.into());
         self
@@ -627,14 +627,14 @@ impl MpcKitBuilder {
         self
     }
 
-    pub fn build(self) -> Result<MpcKit> {
+    pub fn build(self) -> Result<MPCKit> {
         let api_key = self
             .api_key
-            .ok_or_else(|| MpcKitError::Invalid("api_key is required".into()))?;
+            .ok_or_else(|| MPCKitError::Invalid("api_key is required".into()))?;
         let network = self
             .network
-            .ok_or_else(|| MpcKitError::Invalid("network is required".into()))?;
-        // Default to the hosted MpcKit endpoint for the chosen network;
+            .ok_or_else(|| MPCKitError::Invalid("network is required".into()))?;
+        // Default to the hosted MPCKit endpoint for the chosen network;
         // self-hosting / dev callers can pass `.base_url(...)` to override.
         let raw_base = self
             .base_url
@@ -652,7 +652,7 @@ impl MpcKitBuilder {
         let mut headers = HeaderMap::new();
         let bearer = format!("Bearer {api_key}");
         let mut bearer_value = HeaderValue::from_str(&bearer)
-            .map_err(|e| MpcKitError::Invalid(format!("invalid api_key: {e}")))?;
+            .map_err(|e| MPCKitError::Invalid(format!("invalid api_key: {e}")))?;
         bearer_value.set_sensitive(true);
         headers.insert(AUTHORIZATION, bearer_value);
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
@@ -666,9 +666,9 @@ impl MpcKitBuilder {
             .user_agent(user_agent)
             .timeout(self.timeout.unwrap_or(DEFAULT_TIMEOUT))
             .build()
-            .map_err(MpcKitError::Transport)?;
+            .map_err(MPCKitError::Transport)?;
 
-        Ok(MpcKit {
+        Ok(MPCKit {
             inner,
             base_url,
             network,
@@ -695,7 +695,7 @@ fn random_bytes_32() -> Vec<u8> {
     out
 }
 
-/// Inputs to [`MpcKit::onboard`]. The `seed` is the user's root secret
+/// Inputs to [`MPCKit::onboard`]. The `seed` is the user's root secret
 /// (e.g. derived from a passkey PRF or env-stored secret); never sent
 /// to the backend.
 #[cfg(feature = "crypto")]
@@ -717,7 +717,7 @@ pub struct OnboardResult {
     pub user_public_output_hex: String,
 }
 
-/// Inputs to [`MpcKit::sign`]. The `user_secret_key_share_hex` is the
+/// Inputs to [`MPCKit::sign`]. The `user_secret_key_share_hex` is the
 /// value returned by a prior `onboard()` call; persist it locally —
 /// the backend never has it.
 #[cfg(feature = "crypto")]

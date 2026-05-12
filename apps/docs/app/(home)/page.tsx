@@ -66,7 +66,7 @@ function Hero() {
             </h1>
 
             <p className="mt-7 max-w-[52ch] text-pretty text-base leading-relaxed text-fd-muted-foreground md:text-[18px]">
-              MpcKit is the signing API your wallet, exchange, or app calls to
+              MPCKit is the signing API your wallet, exchange, or app calls to
               send funds across chains. Bitcoin, Ethereum, Solana, Sui, and
               every chain those four curves cover, from one HTTP call. We never
               hold your users' keys. Neither do you.
@@ -118,7 +118,7 @@ function Hero() {
                   <span className="text-pink-500 dark:text-pink-300">
                     import
                   </span>{" "}
-                  {"{ MpcKit, Curve }"}{" "}
+                  {"{ MPCKit, Curve }"}{" "}
                   <span className="text-pink-500 dark:text-pink-300">from</span>{" "}
                   <span className="text-emerald-600 dark:text-emerald-300">
                     "@mpckit/sdk"
@@ -130,7 +130,7 @@ function Hero() {
                   api ={" "}
                   <span className="text-pink-500 dark:text-pink-300">new</span>{" "}
                   <span className="text-blue-600 dark:text-blue-300">
-                    MpcKit
+                    MPCKit
                   </span>
                   (...);
                   {"\n\n"}
@@ -514,9 +514,9 @@ function PricingAndEngineers() {
                   </span>
                   {"\n"}
                   <span className="text-pink-500 dark:text-pink-300">use</span>{" "}
-                  mpckit::{"{MpcKit, Curve}"};{"\n\n"}
+                  mpckit::{"{MPCKit, Curve}"};{"\n\n"}
                   <span className="text-pink-500 dark:text-pink-300">let</span>{" "}
-                  api = MpcKit::builder()
+                  api = MPCKit::builder()
                   {"\n  "}
                   .api_key(key)
                   {"\n  "}
@@ -647,7 +647,7 @@ function SiteFooter() {
             >
               <Mark size={26} />
               <span className="text-[15px] font-semibold tracking-tight">
-                MpcKit
+                MPCKit
               </span>
             </Link>
             <p className="mt-5 max-w-[42ch] text-sm text-fd-muted-foreground">
@@ -685,7 +685,7 @@ function SiteFooter() {
 
         <div className="mt-14 flex flex-col-reverse items-start gap-4 border-t pt-6 text-[12px] text-fd-muted-foreground md:flex-row md:items-center md:justify-between">
           <span className="t-mono">
-            © 2026 MpcKit. Built on Sui, signed with care.
+            © 2026 MPCKit. Built on Sui, signed with care.
           </span>
           <span className="t-mono text-[10.5px] uppercase tracking-[0.18em]">
             Hosted MPC · settled on Sui mainnet

@@ -1,7 +1,7 @@
 /**
- * `MpcKit` is the single class consumers see. It composes:
+ * `MPCKit` is the single class consumers see. It composes:
  *
- *   - the typed HTTP client for MpcKit
+ *   - the typed HTTP client for MPCKit
  *   - a `CryptoEngine` (defaults to `InlineCryptoEngine`; swap in
  *     `WebWorkerCryptoEngine` to keep the main thread responsive)
  *   - a lazily-constructed `IkaClient` for the small set of network
@@ -19,9 +19,9 @@ import { Curve as CurveEnum } from "./constants";
 import type { CryptoEngine } from "./crypto/engine";
 import { inlineCryptoEngine } from "./crypto/inline";
 import {
-  MpcKitError,
-  MpcKitInsufficientCreditsError,
-  MpcKitTimeoutError,
+  MPCKitError,
+  MPCKitInsufficientCreditsError,
+  MPCKitTimeoutError,
 } from "./errors";
 import { HttpClient } from "./http";
 import type {
@@ -50,7 +50,7 @@ const CURVE_NUMBER: Record<Curve, number> = {
 };
 
 /**
- * Hosted MpcKit endpoints. `network` selects which one is used by default.
+ * Hosted MPCKit endpoints. `network` selects which one is used by default.
  * Pass a custom `baseUrl` to override (self-hosting, dev, on-prem).
  */
 export const MPCKIT_HOSTS = {
@@ -62,7 +62,7 @@ export function defaultBaseUrl(network: Network): string {
   return MPCKIT_HOSTS[network];
 }
 
-export interface MpcKitOptions {
+export interface MPCKitOptions {
   /** API key issued by the backend. */
   apiKey: string;
   /** Which Sui network to talk to. Picks the default backend host. */
@@ -122,7 +122,7 @@ export interface SignResult {
   txDigest: string | null;
 }
 
-export class MpcKit {
+export class MPCKit {
   private readonly http: HttpClient;
   private readonly crypto: CryptoEngine;
   private readonly network: Network;
@@ -130,7 +130,7 @@ export class MpcKit {
   private readonly protocolParametersCache = new Map<Curve, Uint8Array>();
   private ikaClient: IkaClient | undefined;
 
-  constructor(opts: MpcKitOptions) {
+  constructor(opts: MPCKitOptions) {
     this.http = new HttpClient({
       baseUrl: opts.baseUrl ?? defaultBaseUrl(opts.network),
       apiKey: opts.apiKey,
@@ -175,7 +175,7 @@ export class MpcKit {
    * `(curve, networkEncryptionKeyId)`, so going through us is ~50 ms
    * after the first call.
    *
-   * The returned bytes are cached on this `MpcKit` instance until
+   * The returned bytes are cached on this `MPCKit` instance until
    * `invalidateProtocolParametersCache()` is called. Backend cache
    * invalidation is automatic on network reconfiguration; long-lived
    * SDK instances that span a reconfiguration should clear after
@@ -409,7 +409,7 @@ export class MpcKit {
     );
 
     if (final.status === "failed") {
-      throw new MpcKitError(
+      throw new MPCKitError(
         `sign failed: ${final.errorMessage ?? final.errorCode ?? "unknown"}`,
         422,
         final.errorCode ?? "SIGN_FAILED",
@@ -417,7 +417,7 @@ export class MpcKit {
       );
     }
     if (!final.signatureHex) {
-      throw new MpcKitError(
+      throw new MPCKitError(
         "sign completed without signature",
         500,
         "SIGN_BAD_SHAPE",
@@ -456,7 +456,7 @@ export class MpcKit {
     const hash =
       HASH_NUMBER[args.curve]?.[args.signatureAlgorithm]?.[args.hashScheme];
     if (sigAlgo === undefined || hash === undefined) {
-      throw new MpcKitError(
+      throw new MPCKitError(
         `invalid sig/hash combination for curve ${args.curve}`,
         400,
         "INVALID_SIG_HASH",
@@ -493,4 +493,4 @@ const HASH_NUMBER: Record<string, Record<string, Record<string, number>>> = {
   RISTRETTO: { SchnorrkelSubstrate: { Merlin: 0 } },
 };
 
-export { MpcKitError, MpcKitInsufficientCreditsError, MpcKitTimeoutError };
+export { MPCKitError, MPCKitInsufficientCreditsError, MPCKitTimeoutError };

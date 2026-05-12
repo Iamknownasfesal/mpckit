@@ -9,7 +9,7 @@
  * Set MPCKIT_BASE_URL only if you're self-hosting; otherwise the SDK
  * picks the hosted endpoint for the chosen network.
  */
-import { Curve, Hash, MpcKit, SignatureAlgorithm } from "@mpckit/sdk";
+import { Curve, Hash, MPCKit, SignatureAlgorithm } from "@mpckit/sdk";
 
 async function main() {
   const apiKey = required("MPCKIT_API_KEY");
@@ -17,7 +17,7 @@ async function main() {
   const seedHex = process.env.MPCKIT_SEED_HEX ?? "42".repeat(32);
   const seed = Uint8Array.from(Buffer.from(seedHex, "hex"));
 
-  const api = new MpcKit({
+  const api = new MPCKit({
     apiKey,
     network: "testnet",
     ...(baseUrl ? { baseUrl } : {}),

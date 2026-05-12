@@ -1,9 +1,9 @@
 ---
 title: React SDK
-description: Overview of @mpckit/react. Provider, query hooks, and mutation hooks over MpcKit.
+description: Overview of @mpckit/react. Provider, query hooks, and mutation hooks over MPCKit.
 ---
 
-`@mpckit/react` wraps the imperative `MpcKit` class in a Provider
+`@mpckit/react` wraps the imperative `MPCKit` class in a Provider
 plus a set of TanStack-Query-shaped hooks. The Provider also handles
 the boilerplate of constructing a Web Worker crypto engine when
 `useWorker` is set, so DKG and sign ceremonies don't block the main
@@ -13,7 +13,7 @@ Peer deps: `react@>=18`, `@tanstack/react-query@>=5`.
 
 <Callout title="You own the QueryClient">
   The SDK doesn't ship its own `QueryClientProvider`. Wrap
-  `<MpcKitProvider/>` in your app's `<QueryClientProvider client={...}/>`
+  `<MPCKitProvider/>` in your app's `<QueryClientProvider client={...}/>`
   so every hook participates in your app's cache, devtools, and
   invalidation.
 </Callout>
@@ -54,7 +54,7 @@ npm install @mpckit/react @mpckit/sdk @tanstack/react-query
 "use client";
 
 import {
-  MpcKitProvider,
+  MPCKitProvider,
   useBalance,
   useOnboard,
   Curve,
@@ -66,7 +66,7 @@ const queryClient = new QueryClient();
 export function Root({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <MpcKitProvider
+      <MPCKitProvider
         options={{
           baseUrl: "https://api.mpckit.xyz",
           apiKey: process.env.NEXT_PUBLIC_MPCKIT_API_KEY!,
@@ -74,7 +74,7 @@ export function Root({ children }: { children: React.ReactNode }) {
         }}
       >
         {children}
-      </MpcKitProvider>
+      </MPCKitProvider>
     </QueryClientProvider>
   );
 }
@@ -88,10 +88,10 @@ function CreditsBadge() {
 ## Where to go next
 
 <Cards>
-  <Card title="Provider" href="/docs/react/provider" description="MpcKitProvider, options, and the worker factory." />
+  <Card title="Provider" href="/docs/react/provider" description="MPCKitProvider, options, and the worker factory." />
   <Card title="Query hooks" href="/docs/react/queries" description="useBalance, useDWallet, useDWallets, and friends." />
   <Card title="Mutation hooks" href="/docs/react/mutations" description="useOnboard, useSign, useDeclareDeposit." />
-  <Card title="Imperative escape hatches" href="/docs/react/imperative" description="useMpcKit and useEdenClient." />
+  <Card title="Imperative escape hatches" href="/docs/react/imperative" description="useMPCKit and useEdenClient." />
   <Card title="Query keys" href="/docs/react/query-keys" description="Invalidate manually with mpcKitQueryKeys." />
   <Card title="Re-exports" href="/docs/react/re-exports" description="Constants, errors, and types from the core SDK." />
 </Cards>

@@ -50,7 +50,7 @@ pub struct NetworkEncryptionKey {
 
 /// Wire shape for `GET /v1/protocol-parameters?curve=N`. Backend ships
 /// the 44 MB blob base64-encoded; the high-level
-/// [`crate::MpcKit::protocol_parameters`] helper decodes + caches the
+/// [`crate::MPCKit::protocol_parameters`] helper decodes + caches the
 /// bytes for you. Use this struct directly only if you need the raw
 /// envelope (e.g. inspecting `epoch` / `loaded_at` for cache
 /// invalidation triggers).
@@ -178,7 +178,7 @@ pub struct DWalletResponse {
 /// backend proxies a Sui gRPC query to read the dwallet object and
 /// returns just the bytes the Rust SDK needs for its accept / sign
 /// signatures. Hex-encoded for transport; the high-level
-/// [`crate::MpcKit::onboard`] / [`crate::MpcKit::sign`] decode it
+/// [`crate::MPCKit::onboard`] / [`crate::MPCKit::sign`] decode it
 /// before passing into the centralized-party crate.
 #[derive(Debug, Clone, Deserialize)]
 pub struct DWalletOnchainState {

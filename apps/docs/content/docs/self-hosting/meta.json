@@ -1,6 +1,6 @@
 {
   "title": "Self-hosting",
-  "description": "Run your own MpcKit instance with Docker or Kubernetes.",
+  "description": "Run your own MPCKit instance with Docker or Kubernetes.",
   "icon": "Server",
   "root": true,
   "pages": [

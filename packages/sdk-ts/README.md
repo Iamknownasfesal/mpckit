@@ -1,6 +1,6 @@
 # @mpckit/sdk
 
-TypeScript SDK for [MpcKit](https://mpckit.xyz): hosted MPC signing for
+TypeScript SDK for [MPCKit](https://mpckit.xyz): hosted MPC signing for
 Sui dWallets. One `onboard()` call runs the full zero-trust DKG
 ceremony; one `sign()` call returns a signature for Bitcoin, Ethereum,
 Solana, or any other curve Ika supports. No MPC node to run.
@@ -16,10 +16,10 @@ npm install @mpckit/sdk
 ## Quickstart
 
 ```ts
-import { Curve, Hash, MpcKit, SignatureAlgorithm } from "@mpckit/sdk";
+import { Curve, Hash, MPCKit, SignatureAlgorithm } from "@mpckit/sdk";
 import { randomBytes } from "node:crypto";
 
-const mpckit = new MpcKit({
+const mpckit = new MPCKit({
   apiKey: process.env.MPCKIT_API_KEY!,
   network: "testnet", // or "mainnet"
 });
@@ -54,14 +54,14 @@ The default `InlineCryptoEngine` runs WASM signing math synchronously
 on the calling thread. For browsers, drop in the worker engine:
 
 ```ts
-import { MpcKit, createWebWorkerCryptoEngine } from "@mpckit/sdk";
+import { MPCKit, createWebWorkerCryptoEngine } from "@mpckit/sdk";
 
 const worker = new Worker(
   new URL("@mpckit/sdk/worker-impl", import.meta.url),
   { type: "module" },
 );
 
-const mpckit = new MpcKit({
+const mpckit = new MPCKit({
   apiKey: import.meta.env.VITE_MPCKIT_API_KEY,
   network: "testnet",
   crypto: createWebWorkerCryptoEngine(worker),
@@ -69,12 +69,12 @@ const mpckit = new MpcKit({
 ```
 
 React apps should reach for [`@mpckit/react`](https://www.npmjs.com/package/@mpckit/react)
-instead, which wraps this in `<MpcKitProvider useWorker />` and hands
+instead, which wraps this in `<MPCKitProvider useWorker />` and hands
 you TanStack Query hooks.
 
 ## Subpath exports
 
-- `@mpckit/sdk`: main entry. `MpcKit`, types, errors, curve/hash
+- `@mpckit/sdk`: main entry. `MPCKit`, types, errors, curve/hash
   enums.
 - `@mpckit/sdk/eden`: typed [Eden](https://elysiajs.com/eden/overview.html)
   client over the backend's Elysia API. Use this when you want raw

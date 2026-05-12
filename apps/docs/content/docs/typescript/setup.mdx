@@ -1,6 +1,6 @@
 ---
 title: Setup
-description: Install @mpckit/sdk, construct MpcKit, and tune options.
+description: Install @mpckit/sdk, construct MPCKit, and tune options.
 ---
 
 ## Install
@@ -44,16 +44,16 @@ yarn add @mpckit/sdk
 ## Construct
 
 ```ts
-import { MpcKit } from "@mpckit/sdk";
+import { MPCKit } from "@mpckit/sdk";
 
-const api = new MpcKit({
+const api = new MPCKit({
   baseUrl: "https://api.mpckit.xyz",
   apiKey: process.env.MPCKIT_API_KEY!,
   network: "testnet",
 });
 ```
 
-## `MpcKitOptions`
+## `MPCKitOptions`
 
 <TypeTable
   type={{
