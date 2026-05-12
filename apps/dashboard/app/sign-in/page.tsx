@@ -52,7 +52,14 @@ export default function SignInPage() {
     setError(null);
     setPending("github");
     try {
-      await signIn.social({ provider: "github", callbackURL: POST_SIGNIN });
+      // Better-Auth resolves a relative callbackURL against its own
+      // baseURL (api.mpckit.xyz), which would land us on the backend
+      // origin. Anchor it to the dashboard origin instead.
+      const callbackURL =
+        typeof window !== "undefined"
+          ? `${window.location.origin}${POST_SIGNIN}`
+          : POST_SIGNIN;
+      await signIn.social({ provider: "github", callbackURL });
     } catch (e) {
       setError(e instanceof Error ? e.message : "GitHub sign-in failed");
       setPending(null);
