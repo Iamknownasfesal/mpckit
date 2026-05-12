@@ -10,7 +10,7 @@
         "lefthook": "^2.1.6",
         "tsup": "^8.5.1",
         "turbo": "^2.3.0",
-        "typescript": "^5.6.3",
+        "typescript": "^6.0.3",
       },
     },
     "apps/backend": {
@@ -47,7 +47,7 @@
         "@types/bun": "^1.1.13",
         "@types/opossum": "^8.1.8",
         "drizzle-kit": "^0.31.10",
-        "typescript": "^5.6.3",
+        "typescript": "^6.0.3",
       },
     },
     "apps/dashboard": {
@@ -98,7 +98,7 @@
         "@types/react-dom": "^19.0.0",
         "postcss": "^8.4.0",
         "tailwindcss": "^4.1.0",
-        "typescript": "^5.6.3",
+        "typescript": "^6.0.3",
       },
     },
     "apps/docs": {
@@ -122,7 +122,7 @@
         "@types/react-dom": "^19.0.0",
         "postcss": "^8.4.0",
         "tailwindcss": "^4.1.0",
-        "typescript": "^5.6.3",
+        "typescript": "^6.0.3",
       },
     },
     "examples/ts-browser": {
@@ -150,7 +150,7 @@
       },
       "devDependencies": {
         "tsup": "^8.5.0",
-        "typescript": "^5.6.3",
+        "typescript": "^6.0.3",
       },
     },
     "packages/sdk-react": {
@@ -168,7 +168,7 @@
         "react": "^18.3.0",
         "react-dom": "^18.3.0",
         "tsup": "^8.5.0",
-        "typescript": "^5.6.3",
+        "typescript": "^6.0.3",
       },
       "peerDependencies": {
         "@tanstack/react-query": "^5.0.0",
@@ -186,7 +186,7 @@
       },
       "devDependencies": {
         "tsup": "^8.5.0",
-        "typescript": "^5.6.3",
+        "typescript": "^6.0.3",
       },
     },
   },
@@ -1683,7 +1683,7 @@
 
     "type-fest": ["type-fest@5.6.0", "", { "dependencies": { "tagged-tag": "^1.0.0" } }, "sha512-8ZiHFm91orbSAe2PSAiSVBVko18pbhbiB3U9GglSzF/zCGkR+rxpHx6sEMCUm4kxY4LjDIUGgCfUMtwfZfjfUA=="],
 
-    "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+    "typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "ufo": ["ufo@1.6.4", "", {}, "sha512-JFNbkD1Svwe0KvGi8GOeLcP4kAWQ609twvCdcHxq1oSL8svv39ZuSvajcD8B+5D0eL4+s1Is2D/O6KN3qcTeRA=="],
 
