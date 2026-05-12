@@ -69,7 +69,7 @@ jobs:
       SUI_GAS_STATION_SPONSOR_KEYPAIR_B64: ${{ secrets.SUI_GAS_STATION_SPONSOR_KEYPAIR_B64 }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: assert required secrets
         run: |
