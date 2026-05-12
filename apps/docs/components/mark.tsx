@@ -21,11 +21,11 @@ export function Mark({ size = 28, className }: Props) {
       role="img"
     >
       <defs>
-        <mask id="mpckit-docs-mark-moon">
+        <mask id="mpckit-docs-mark-moon" maskUnits="userSpaceOnUse">
           <rect width="100" height="100" fill="white" />
           <circle cx="27" cy="27" r="25" fill="black" />
         </mask>
-        <mask id="mpckit-docs-mark-small">
+        <mask id="mpckit-docs-mark-small" maskUnits="userSpaceOnUse">
           <rect width="100" height="100" fill="white" />
           <circle cx="36" cy="36" r="5" fill="black" />
         </mask>
