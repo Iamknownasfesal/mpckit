@@ -1841,7 +1841,7 @@ dependencies = [
  "serde",
  "serde_json",
  "signature 3.0.0-rc.4",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "tokio",
  "url",
  "uuid",
