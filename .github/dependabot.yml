@@ -1,0 +1,80 @@
+# Dependabot keeps deps current and patches CVEs as they're disclosed.
+# Three ecosystems live in this repo:
+#   - npm (the workspace; bun shares the same registry + manifests)
+#   - cargo (sdk-rust + examples/rust-cli)
+#   - github-actions (workflow files)
+#
+# Updates land as PRs against main. CODEOWNERS auto-pings me on
+# workflow PRs; the rest follow normal review flow.
+#
+# Strategy:
+#   - Weekly cadence (not daily) so the PR firehose stays manageable.
+#   - Group patch + minor updates per ecosystem so deps move in
+#     coherent batches instead of dozens of single-version PRs.
+#   - Majors get their own PR each (breaking change discipline).
+#   - Security updates ignore the schedule and land whenever found.
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Istanbul"
+    open-pull-requests-limit: 10
+    labels:
+      - "deps"
+      - "deps/npm"
+    groups:
+      npm-non-major:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Istanbul"
+    open-pull-requests-limit: 5
+    labels:
+      - "deps"
+      - "deps/cargo"
+    groups:
+      cargo-non-major:
+        update-types:
+          - "minor"
+          - "patch"
+    # The crypto-feature deps are pinned to specific ikaprerelease
+    # revs that don't follow semver; Dependabot would constantly
+    # propose downgrades. Cargo.toml already documents the pin.
+    ignore:
+      - dependency-name: "dwallet-mpc-centralized-party"
+      - dependency-name: "fastcrypto"
+      - dependency-name: "crypto-bigint"
+      - dependency-name: "k256"
+      - dependency-name: "p256"
+      - dependency-name: "curve25519-dalek"
+      - dependency-name: "signature"
+      - dependency-name: "rfc6979"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Istanbul"
+    open-pull-requests-limit: 5
+    labels:
+      - "deps"
+      - "deps/actions"
+    groups:
+      actions-non-major:
+        update-types:
+          - "minor"
+          - "patch"
