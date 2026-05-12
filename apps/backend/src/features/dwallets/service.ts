@@ -1,27 +1,3 @@
-import { findAccountForUser, recordAccount } from "@/features/accounts/service";
-import {
-  OP_PRICES,
-  charge as chargeCredits,
-  refund as refundCredits,
-} from "@/features/billing/service";
-import { getDb } from "@/shared/db/client";
-import {
-  type DWallet,
-  accounts,
-  dwallets,
-  encryptionKeys,
-} from "@/shared/db/schema";
-import { errors } from "@/shared/errors";
-import { getIkaClient } from "@/shared/ika/client";
-import { findEvents, findFirstCreatedByType } from "@/shared/sui/effects";
-import type { ExecutedTx } from "@/shared/sui/hot-wallet";
-import {
-  type Network,
-  buildAcceptUserShare,
-  buildAddDwalletZeroTrust,
-  buildOnboardZeroTrust,
-} from "@/shared/sui/move-calls";
-import { getTxExecutor } from "@/shared/sui/tx-executor";
 /**
  * dWallet lifecycle. Two operations:
  *
@@ -45,6 +21,30 @@ import { getTxExecutor } from "@/shared/sui/tx-executor";
 import { CoordinatorInnerModule, SessionsManagerModule } from "@ika.xyz/sdk";
 import { Transaction } from "@mysten/sui/transactions";
 import { and, eq } from "drizzle-orm";
+import { findAccountForUser, recordAccount } from "@/features/accounts/service";
+import {
+  charge as chargeCredits,
+  OP_PRICES,
+  refund as refundCredits,
+} from "@/features/billing/service";
+import { getDb } from "@/shared/db/client";
+import {
+  accounts,
+  type DWallet,
+  dwallets,
+  encryptionKeys,
+} from "@/shared/db/schema";
+import { errors } from "@/shared/errors";
+import { getIkaClient } from "@/shared/ika/client";
+import { findEvents, findFirstCreatedByType } from "@/shared/sui/effects";
+import type { ExecutedTx } from "@/shared/sui/hot-wallet";
+import {
+  buildAcceptUserShare,
+  buildAddDwalletZeroTrust,
+  buildOnboardZeroTrust,
+  type Network,
+} from "@/shared/sui/move-calls";
+import { getTxExecutor } from "@/shared/sui/tx-executor";
 
 export interface OnboardZeroTrustArgs {
   userId: string;

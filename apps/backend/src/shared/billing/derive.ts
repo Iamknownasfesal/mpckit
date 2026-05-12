@@ -13,9 +13,9 @@
  * can pass it directly to anything that wants a Signer.
  */
 import { hkdfSync } from "node:crypto";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { env } from "@/config/env";
 import { errors } from "@/shared/errors";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 
 const HKDF_SALT = Buffer.from("ika-api/billing/v1", "utf8");
 

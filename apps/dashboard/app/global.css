@@ -179,7 +179,8 @@ html[data-network="mainnet"] {
 }
 
 .tile-glow-teal {
-  background-image: radial-gradient(
+  background-image:
+    radial-gradient(
       ellipse 60% 60% at 100% 0%,
       color-mix(in oklab, var(--primary) 22%, transparent),
       transparent 65%

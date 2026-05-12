@@ -11,7 +11,15 @@
     "directory": "packages/sdk-ts"
   },
   "bugs": "https://github.com/Iamknownasfesal/mpckit/issues",
-  "keywords": ["mpc", "sui", "ika", "dwallet", "wallet", "signing", "crypto"],
+  "keywords": [
+    "mpc",
+    "sui",
+    "ika",
+    "dwallet",
+    "wallet",
+    "signing",
+    "crypto"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -30,7 +38,9 @@
       "import": "./dist/crypto/worker-impl.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "publishConfig": {
     "access": "public"

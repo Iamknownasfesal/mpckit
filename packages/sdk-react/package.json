@@ -11,7 +11,14 @@
     "directory": "packages/sdk-react"
   },
   "bugs": "https://github.com/Iamknownasfesal/mpckit/issues",
-  "keywords": ["mpc", "sui", "react", "tanstack-query", "ika", "mpckit"],
+  "keywords": [
+    "mpc",
+    "sui",
+    "react",
+    "tanstack-query",
+    "ika",
+    "mpckit"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -22,7 +29,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "publishConfig": {
     "access": "public"

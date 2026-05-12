@@ -23,13 +23,13 @@
  */
 import {
   Curve,
-  IkaClient,
-  UserShareEncryptionKeys,
   createRandomSessionIdentifier,
   getNetworkConfig,
+  IkaClient,
   prepareDKGAsync,
+  UserShareEncryptionKeys,
 } from "@ika.xyz/sdk";
-import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from "@mysten/sui/jsonRpc";
+import { getJsonRpcFullnodeUrl, SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
 
 interface Env {
   backendUrl: string;

@@ -1,14 +1,3 @@
-import { type IkaNetwork, env } from "@/config/env";
-import {
-  assertPricesFresh,
-  getIkaCoinType,
-  microUsdFromAtomic,
-} from "@/features/pricing/price-feed";
-import { mutableCache } from "@/shared/cache/l0";
-import { errors } from "@/shared/errors";
-import { getIkaConfig } from "@/shared/ika/client";
-import { getSuiClient } from "@/shared/sui/client";
-import { callResilient } from "@/shared/sui/resilience";
 /**
  * Pricing snapshot service.
  *
@@ -25,6 +14,17 @@ import { callResilient } from "@/shared/sui/resilience";
  */
 import { PricingInfo } from "@mpckit/core";
 import { Transaction } from "@mysten/sui/transactions";
+import { env, type IkaNetwork } from "@/config/env";
+import {
+  assertPricesFresh,
+  getIkaCoinType,
+  microUsdFromAtomic,
+} from "@/features/pricing/price-feed";
+import { mutableCache } from "@/shared/cache/l0";
+import { errors } from "@/shared/errors";
+import { getIkaConfig } from "@/shared/ika/client";
+import { getSuiClient } from "@/shared/sui/client";
+import { callResilient } from "@/shared/sui/resilience";
 
 /**
  * Protocol flags from coordinator_inner.move. Mirrors what's emitted in

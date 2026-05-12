@@ -1,38 +1,3 @@
-import { env } from "@/config/env";
-import type { IkaNetwork } from "@/config/env";
-import { log } from "@/config/log";
-import {
-  OP_PRICES,
-  charge as chargeCredits,
-  refund as refundCredits,
-} from "@/features/billing/service";
-import {
-  allocate as allocatePresign,
-  markConsumedPending,
-  markUsed as markPresignUsed,
-  rollbackToReady,
-} from "@/features/presigns/service";
-import { signSubmitUnknown } from "@/shared/cache/metrics";
-import { getDb } from "@/shared/db/client";
-import {
-  type SignRequest,
-  accounts,
-  dwallets,
-  presigns,
-  signRequests,
-} from "@/shared/db/schema";
-import { errors } from "@/shared/errors";
-import { getIkaClient } from "@/shared/ika/client";
-import {
-  curveFromNumber,
-  signatureAlgorithmFromNumber,
-} from "@/shared/ika/curves";
-import { enqueue } from "@/shared/queue/client";
-import { JOBS } from "@/shared/queue/types";
-import { getSuiClient } from "@/shared/sui/client";
-import { findEvents } from "@/shared/sui/effects";
-import { type Network, buildSignZeroTrust } from "@/shared/sui/move-calls";
-import { TxExecutorError, getTxExecutor } from "@/shared/sui/tx-executor";
 /**
  * Sign request lifecycle. Two-phase API because the user's centralized
  * signature is bound to a specific presign's bytes; the user must know
@@ -65,6 +30,41 @@ import { TxExecutorError, getTxExecutor } from "@/shared/sui/tx-executor";
  */
 import { Transaction } from "@mysten/sui/transactions";
 import { and, eq, lt } from "drizzle-orm";
+import type { IkaNetwork } from "@/config/env";
+import { env } from "@/config/env";
+import { log } from "@/config/log";
+import {
+  charge as chargeCredits,
+  OP_PRICES,
+  refund as refundCredits,
+} from "@/features/billing/service";
+import {
+  allocate as allocatePresign,
+  markConsumedPending,
+  markUsed as markPresignUsed,
+  rollbackToReady,
+} from "@/features/presigns/service";
+import { signSubmitUnknown } from "@/shared/cache/metrics";
+import { getDb } from "@/shared/db/client";
+import {
+  accounts,
+  dwallets,
+  presigns,
+  type SignRequest,
+  signRequests,
+} from "@/shared/db/schema";
+import { errors } from "@/shared/errors";
+import { getIkaClient } from "@/shared/ika/client";
+import {
+  curveFromNumber,
+  signatureAlgorithmFromNumber,
+} from "@/shared/ika/curves";
+import { enqueue } from "@/shared/queue/client";
+import { JOBS } from "@/shared/queue/types";
+import { getSuiClient } from "@/shared/sui/client";
+import { findEvents } from "@/shared/sui/effects";
+import { buildSignZeroTrust, type Network } from "@/shared/sui/move-calls";
+import { getTxExecutor, TxExecutorError } from "@/shared/sui/tx-executor";
 
 // ---------------------------------------------------------------------------
 // Phase 1: prepare

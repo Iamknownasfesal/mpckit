@@ -1,6 +1,6 @@
+import { Elysia } from "elysia";
 import { refreshAgeGauge } from "@/features/pricing/price-feed";
 import { registry } from "@/shared/cache/metrics";
-import { Elysia } from "elysia";
 
 /**
  * Prometheus scrape endpoint. No auth: a /metrics endpoint that

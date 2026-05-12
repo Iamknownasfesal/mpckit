@@ -1,5 +1,3 @@
-import { listAccountsForUser } from "@/features/accounts/service";
-import { requestNetwork, requireAuth } from "@/http/middleware/auth";
 /**
  *   GET /v1/accounts   list this user's accounts
  *
@@ -7,6 +5,8 @@ import { requestNetwork, requireAuth } from "@/http/middleware/auth";
  * standalone create endpoint.
  */
 import { Elysia } from "elysia";
+import { listAccountsForUser } from "@/features/accounts/service";
+import { requestNetwork, requireAuth } from "@/http/middleware/auth";
 
 export const accountRoutes = new Elysia({ prefix: "/v1" }).get(
   "/accounts",

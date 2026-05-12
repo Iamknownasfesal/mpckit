@@ -1,5 +1,18 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import {
+  AlertTriangle,
+  Fingerprint,
+  LogOut,
+  MonitorSmartphone,
+  Pencil,
+  Trash2,
+  Wallet,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ActivityFeed, type AuditEvent } from "@/components/dash/activity-feed";
 import { Mono } from "@/components/dash/mono";
 import { PageHeader } from "@/components/dash/page-header";
@@ -24,19 +37,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { authClient, useSession } from "@/lib/auth-client";
 import { identityDisplay } from "@/lib/identity";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import {
-  AlertTriangle,
-  Fingerprint,
-  LogOut,
-  MonitorSmartphone,
-  Pencil,
-  Trash2,
-  Wallet,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 type PasskeyRow = {
   id: string;

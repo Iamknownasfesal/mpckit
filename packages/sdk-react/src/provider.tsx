@@ -14,15 +14,15 @@
  */
 import {
   type CryptoEngine,
-  MpcKit,
-  type MpcKitOptions,
   createWebWorkerCryptoEngine,
   defaultBaseUrl,
+  MpcKit,
+  type MpcKitOptions,
 } from "@mpckit/sdk";
-import { type EdenClient, createEdenClient } from "@mpckit/sdk/eden";
+import { createEdenClient, type EdenClient } from "@mpckit/sdk/eden";
 import {
-  type ReactNode,
   createContext,
+  type ReactNode,
   useContext,
   useEffect,
   useMemo,

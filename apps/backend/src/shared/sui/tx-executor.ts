@@ -1,13 +1,3 @@
-import { type IkaNetwork, env } from "@/config/env";
-import { log } from "@/config/log";
-import { getNetwork } from "@/shared/networks/registry";
-import { withLock } from "@/shared/redis/lock";
-import { getSuiClient } from "@/shared/sui/client";
-import {
-  type ExecutedTx,
-  type HotWallet,
-  getHotWallet,
-} from "@/shared/sui/hot-wallet";
 import type { SuiClientTypes } from "@mysten/sui/client";
 /**
  * Tx executor abstraction. Routes and workers don't sign transactions
@@ -38,6 +28,16 @@ import type { SuiClientTypes } from "@mysten/sui/client";
  * path are left empty.
  */
 import type { Transaction } from "@mysten/sui/transactions";
+import { env, type IkaNetwork } from "@/config/env";
+import { log } from "@/config/log";
+import { getNetwork } from "@/shared/networks/registry";
+import { withLock } from "@/shared/redis/lock";
+import { getSuiClient } from "@/shared/sui/client";
+import {
+  type ExecutedTx,
+  getHotWallet,
+  type HotWallet,
+} from "@/shared/sui/hot-wallet";
 
 export interface TxExecutor {
   /** Sui address that signs / sponsors. PTBs without a sender get this. */

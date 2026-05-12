@@ -1,5 +1,3 @@
-import { getDb } from "@/shared/db/client";
-import { type Account, accounts } from "@/shared/db/schema";
 /**
  * Accounts read surface. Account creation happens inside the dwallets
  * onboarding PTB (`features/dwallets/service.ts::onboardZeroTrust`)
@@ -8,6 +6,8 @@ import { type Account, accounts } from "@/shared/db/schema";
  * state.
  */
 import { and, eq } from "drizzle-orm";
+import { getDb } from "@/shared/db/client";
+import { type Account, accounts } from "@/shared/db/schema";
 
 export async function findAccountForUser(
   userId: string,

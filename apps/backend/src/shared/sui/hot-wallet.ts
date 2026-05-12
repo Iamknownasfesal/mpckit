@@ -1,4 +1,7 @@
-import { env } from "@/config/env";
+import { DecryptCommand, KMSClient } from "@aws-sdk/client-kms";
+import type { SuiClientTypes } from "@mysten/sui/client";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import type { Transaction } from "@mysten/sui/transactions";
 /**
  * Hot wallet adapter.
  *
@@ -26,12 +29,9 @@ import { env } from "@/config/env";
  * can rely on `getHotWallet()` returning the populated singleton.
  */
 import type { IkaNetwork } from "@/config/env";
+import { env } from "@/config/env";
 import { log } from "@/config/log";
 import { getSuiClient } from "@/shared/sui/client";
-import { DecryptCommand, KMSClient } from "@aws-sdk/client-kms";
-import type { SuiClientTypes } from "@mysten/sui/client";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import type { Transaction } from "@mysten/sui/transactions";
 
 /**
  * Normalised success shape; everything routes / workers need to extract

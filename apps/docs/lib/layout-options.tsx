@@ -1,6 +1,6 @@
+import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 import { Mark } from "@/components/mark";
 import { DASHBOARD_URL, GITHUB_URL } from "@/lib/site";
-import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
 export const baseOptions: BaseLayoutProps = {
   nav: {

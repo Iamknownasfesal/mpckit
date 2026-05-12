@@ -1,5 +1,18 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import {
+  ArrowDownToLine,
+  ArrowUpRight,
+  Check,
+  Copy,
+  Receipt,
+  Wallet,
+} from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { CodeWindow } from "@/components/dash/code-window";
 import { CoinLogo } from "@/components/dash/coin-logo";
 import { Kicker } from "@/components/dash/kicker";
@@ -34,19 +47,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError, api } from "@/lib/api";
 import { coinMeta } from "@/lib/coins";
 import { suiscanObjectUrl, suiscanTxUrl, useNetwork } from "@/lib/network";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import {
-  ArrowDownToLine,
-  ArrowUpRight,
-  Check,
-  Copy,
-  Receipt,
-  Wallet,
-} from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
-import { useState } from "react";
-import { toast } from "sonner";
 
 type BalanceRes = { creditsMicro: string; creditsUsd: string };
 type AddressRes = { address: string };

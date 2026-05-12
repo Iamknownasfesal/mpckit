@@ -6,9 +6,10 @@
  * upstream). Endpoint defaults to the Mysten public fullnode for each
  * network, overridable via SUI_GRPC_URL_<NET>.
  */
+
+import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import type { IkaNetwork } from "@/config/env";
 import { getNetwork } from "@/shared/networks/registry";
-import type { SuiGrpcClient } from "@mysten/sui/grpc";
 
 export function getSuiClient(network: IkaNetwork): SuiGrpcClient {
   return getNetwork(network).sui;

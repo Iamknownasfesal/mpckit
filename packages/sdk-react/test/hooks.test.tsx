@@ -20,7 +20,7 @@ import { useBalance } from "../src/hooks/use-balance";
 import { useDeclareDeposit } from "../src/hooks/use-declare-deposit";
 import { useMpcKit } from "../src/provider";
 import { mpcKitQueryKeys } from "../src/query-keys";
-import { Providers, fakeFetch, makeQueryClient } from "./util";
+import { fakeFetch, makeQueryClient, Providers } from "./util";
 
 function wrapper(
   qc: ReturnType<typeof makeQueryClient>,

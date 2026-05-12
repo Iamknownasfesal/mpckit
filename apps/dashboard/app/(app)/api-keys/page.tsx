@@ -1,5 +1,18 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import {
+  AlertTriangle,
+  Check,
+  Copy,
+  KeyRound,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { CodeWindow } from "@/components/dash/code-window";
 import { Mono } from "@/components/dash/mono";
 import { PageHeader } from "@/components/dash/page-header";
@@ -40,19 +53,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError, api } from "@/lib/api";
 import { type Network, useNetwork } from "@/lib/network";
 import { cn } from "@/lib/utils";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import {
-  AlertTriangle,
-  Check,
-  Copy,
-  KeyRound,
-  MoreHorizontal,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 
 type ApiKeyRow = {
   id: string;

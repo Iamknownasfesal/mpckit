@@ -2,9 +2,10 @@
  * Per-network IkaClient lookup. Backed by the network registry, which
  * lazily constructs + initialises each client on first call.
  */
+
+import type { getNetworkConfig, IkaClient } from "@ika.xyz/sdk";
 import type { IkaNetwork } from "@/config/env";
 import { getNetwork } from "@/shared/networks/registry";
-import type { IkaClient, getNetworkConfig } from "@ika.xyz/sdk";
 
 export function getIkaClient(network: IkaNetwork): Promise<IkaClient> {
   return getNetwork(network).ika();

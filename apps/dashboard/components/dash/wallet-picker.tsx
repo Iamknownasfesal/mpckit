@@ -1,14 +1,5 @@
 "use client";
 
-import { Kicker } from "@/components/dash/kicker";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import {
   useConnectWallet,
   useCurrentAccount,
@@ -20,6 +11,15 @@ import type { WalletWithRequiredFeatures } from "@mysten/wallet-standard";
 import { ArrowUpRight, Check, ChevronRight, Plus, Wallet } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Kicker } from "@/components/dash/kicker";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 const SUGGESTED: { name: string; url: string; blurb: string }[] = [
   { name: "Slush", url: "https://slush.app", blurb: "Mysten Labs official" },

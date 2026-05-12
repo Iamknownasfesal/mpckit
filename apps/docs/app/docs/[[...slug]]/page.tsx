@@ -1,6 +1,3 @@
-import { SITE_NAME, SITE_URL, TWITTER_HANDLE } from "@/lib/site";
-import { source } from "@/lib/source";
-import { getMDXComponents } from "@/mdx-components";
 import {
   DocsBody,
   DocsDescription,
@@ -9,6 +6,9 @@ import {
 } from "fumadocs-ui/page";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { SITE_NAME, SITE_URL, TWITTER_HANDLE } from "@/lib/site";
+import { source } from "@/lib/source";
+import { getMDXComponents } from "@/mdx-components";
 
 type Params = { slug?: string[] };
 

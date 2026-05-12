@@ -1,5 +1,9 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,18 +14,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  type Network,
   currentNetwork,
+  type Network,
   networkHint,
   networkLabel,
   setNetwork,
   useNetwork,
 } from "@/lib/network";
 import { cn } from "@/lib/utils";
-import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 /**
  * Side-effect: stamp the active network onto `<html data-network>` so

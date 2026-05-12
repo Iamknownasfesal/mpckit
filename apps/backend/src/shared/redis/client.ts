@@ -1,5 +1,3 @@
-import { env } from "@/config/env";
-import { log } from "@/config/log";
 /**
  * Single shared ioredis client. All callers (rate limit, distributed
  * locks, idempotency cache, pg-boss is a separate connection) reuse
@@ -9,6 +7,8 @@ import { log } from "@/config/log";
  * to a degraded path without crashing.
  */
 import IORedis, { type Redis } from "ioredis";
+import { env } from "@/config/env";
+import { log } from "@/config/log";
 
 let _redis: Redis | undefined;
 let _initFailed = false;

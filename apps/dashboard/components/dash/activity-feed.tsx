@@ -1,8 +1,5 @@
 "use client";
 
-import { Mono } from "@/components/dash/mono";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
   Circle,
@@ -13,6 +10,9 @@ import {
   Trash2,
   UserPlus,
 } from "lucide-react";
+import { Mono } from "@/components/dash/mono";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export type AuditEvent = {
   id: string;

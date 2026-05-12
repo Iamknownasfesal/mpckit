@@ -1,8 +1,8 @@
+import { Elysia } from "elysia";
 import { getNetworkInfo } from "@/features/network/service";
 import { getIkaConfig } from "@/shared/ika/client";
 import { listNetworks } from "@/shared/networks/registry";
 import { getHotWallet } from "@/shared/sui/hot-wallet";
-import { Elysia } from "elysia";
 
 export const networkRoutes = new Elysia({ prefix: "/v1" }).get(
   "/network",

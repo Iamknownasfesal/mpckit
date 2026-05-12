@@ -1,14 +1,3 @@
-import type { IkaNetwork } from "@/config/env";
-import { log } from "@/config/log";
-import {
-  markDepositSweepFailed,
-  markDepositSwept,
-  sweepUserAddress,
-} from "@/features/billing/sweep";
-import { getDb } from "@/shared/db/client";
-import { billingDeposits } from "@/shared/db/schema";
-import { enqueue, registerHandler } from "@/shared/queue/client";
-import { JOBS } from "@/shared/queue/types";
 /**
  * Billing background jobs.
  *
@@ -20,6 +9,17 @@ import { JOBS } from "@/shared/queue/types";
  *                          catches sweeps lost to transient RPC blips
  */
 import { and, inArray, lt } from "drizzle-orm";
+import type { IkaNetwork } from "@/config/env";
+import { log } from "@/config/log";
+import {
+  markDepositSweepFailed,
+  markDepositSwept,
+  sweepUserAddress,
+} from "@/features/billing/sweep";
+import { getDb } from "@/shared/db/client";
+import { billingDeposits } from "@/shared/db/schema";
+import { enqueue, registerHandler } from "@/shared/queue/client";
+import { JOBS } from "@/shared/queue/types";
 
 export async function registerBillingJobs(): Promise<void> {
   await registerHandler(JOBS.billingSweep, async (payload) => {

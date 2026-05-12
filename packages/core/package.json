@@ -11,7 +11,12 @@
     "directory": "packages/core"
   },
   "bugs": "https://github.com/Iamknownasfesal/mpckit/issues",
-  "keywords": ["mpc", "sui", "ika", "mpckit"],
+  "keywords": [
+    "mpc",
+    "sui",
+    "ika",
+    "mpckit"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -22,7 +27,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "publishConfig": {
     "access": "public"

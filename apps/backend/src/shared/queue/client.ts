@@ -1,6 +1,3 @@
-import { env } from "@/config/env";
-import { log } from "@/config/log";
-import type { JobName, PayloadFor } from "@/shared/queue/types";
 /**
  * pg-boss bootstrap (v12 API).
  *
@@ -17,6 +14,9 @@ import type { JobName, PayloadFor } from "@/shared/queue/types";
  * No Redis needed; horizontal scaling works via row-level locking.
  */
 import { type Job, PgBoss, type WorkOptions } from "pg-boss";
+import { env } from "@/config/env";
+import { log } from "@/config/log";
+import type { JobName, PayloadFor } from "@/shared/queue/types";
 
 let _boss: PgBoss | undefined;
 let _starting: Promise<PgBoss> | undefined;

@@ -1,5 +1,9 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { ArrowUpRight, Wallet } from "lucide-react";
+import Link from "next/link";
 import { CopyMono, Mono } from "@/components/dash/mono";
 import { PageHeader } from "@/components/dash/page-header";
 import { StatusPill } from "@/components/dash/status-pill";
@@ -16,10 +20,6 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { useNetwork } from "@/lib/network";
-import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { ArrowUpRight, Wallet } from "lucide-react";
-import Link from "next/link";
 
 type DwalletRow = {
   id: string;

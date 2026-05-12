@@ -1,3 +1,19 @@
+import { swagger } from "@elysiajs/swagger";
+/**
+ * Elysia composition. Builds the HTTP app from feature route plugins;
+ * the API entrypoint (`src/api.ts`) calls `buildApp()` after the boot
+ * sequence (DB migrate, ika client warmup) finishes.
+ *
+ * Uniform error handling lives here: `AppError` becomes a clean
+ * `{error, code}` JSON with the carried status; everything else maps
+ * to a 500 with the message scrubbed for production.
+ *
+ * `App` is exported as a TypeScript type so the SDK + React bindings
+ * can consume it via `@elysiajs/eden` for end-to-end type safety
+ * without a code-gen step. The runtime never crosses the package
+ * boundary — only the inferred type does.
+ */
+import { Elysia } from "elysia";
 import { accountRoutes } from "@/features/accounts/routes";
 import { betterAuthRoutes } from "@/features/auth/better-auth-routes";
 import { adminUserRoutes, userRoutes } from "@/features/auth/routes";
@@ -15,22 +31,6 @@ import { AuthError, authMiddleware } from "@/http/middleware/auth";
 import { rateLimitMiddleware } from "@/http/middleware/rate-limit";
 import { loggerFor, requestLogger } from "@/http/middleware/request-logger";
 import { AppError } from "@/shared/errors";
-import { swagger } from "@elysiajs/swagger";
-/**
- * Elysia composition. Builds the HTTP app from feature route plugins;
- * the API entrypoint (`src/api.ts`) calls `buildApp()` after the boot
- * sequence (DB migrate, ika client warmup) finishes.
- *
- * Uniform error handling lives here: `AppError` becomes a clean
- * `{error, code}` JSON with the carried status; everything else maps
- * to a 500 with the message scrubbed for production.
- *
- * `App` is exported as a TypeScript type so the SDK + React bindings
- * can consume it via `@elysiajs/eden` for end-to-end type safety
- * without a code-gen step. The runtime never crosses the package
- * boundary — only the inferred type does.
- */
-import { Elysia } from "elysia";
 
 export function buildApp() {
   // No CORS plugin: the dashboard reaches the backend via a Next.js

@@ -1,19 +1,3 @@
-import { env } from "@/config/env";
-import {
-  OP_PRICES,
-  getBalance,
-  getOrCreateDepositAddress,
-  listCharges,
-  listDeposits,
-  recordDeposit,
-} from "@/features/billing/service";
-import {
-  assertPricesFresh,
-  formatUsd,
-  getPriceFeed,
-} from "@/features/pricing/price-feed";
-import { requestNetwork, requireAuth } from "@/http/middleware/auth";
-import type { BillingCharge, BillingDeposit } from "@/shared/db/schema";
 /**
  *   GET  /v1/billing/address     get this user's deposit Sui address
  *   GET  /v1/billing/balance     credit balance (microUSD + USD string)
@@ -29,6 +13,22 @@ import type { BillingCharge, BillingDeposit } from "@/shared/db/schema";
  * up. Everything else requires an api key.
  */
 import { Elysia, t } from "elysia";
+import { env } from "@/config/env";
+import {
+  getBalance,
+  getOrCreateDepositAddress,
+  listCharges,
+  listDeposits,
+  OP_PRICES,
+  recordDeposit,
+} from "@/features/billing/service";
+import {
+  assertPricesFresh,
+  formatUsd,
+  getPriceFeed,
+} from "@/features/pricing/price-feed";
+import { requestNetwork, requireAuth } from "@/http/middleware/auth";
+import type { BillingCharge, BillingDeposit } from "@/shared/db/schema";
 
 const SUI_DIGEST = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
 

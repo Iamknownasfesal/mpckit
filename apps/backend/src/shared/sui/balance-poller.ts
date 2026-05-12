@@ -9,7 +9,7 @@
  * Skipped silently when the wallet is unconfigured (DB-less / read-
  * only deploys). Runs detached: errors are logged but never thrown.
  */
-import { type IkaNetwork, env } from "@/config/env";
+import { env, type IkaNetwork } from "@/config/env";
 import { log } from "@/config/log";
 import { hotWalletSuiMist } from "@/shared/cache/metrics";
 import { listNetworks } from "@/shared/networks/registry";

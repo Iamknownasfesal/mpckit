@@ -1,22 +1,23 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
     "useIgnoreFile": true
   },
   "files": {
-    "ignore": [
-      "dist",
-      "build",
-      "node_modules",
-      ".turbo",
-      ".next",
-      "out",
-      "coverage",
-      "drizzle/meta",
-      "target",
-      "Cargo.lock"
+    "includes": [
+      "**",
+      "!dist",
+      "!build",
+      "!node_modules",
+      "!.turbo",
+      "!.next",
+      "!out",
+      "!coverage",
+      "!drizzle/meta",
+      "!target",
+      "!Cargo.lock"
     ]
   },
   "formatter": {
@@ -39,7 +40,7 @@
       },
       "suspicious": {
         "noExplicitAny": "error",
-        "noConsoleLog": "off"
+        "noConsole": { "level": "off", "options": { "allow": ["log"] } }
       },
       "correctness": {
         "noUnusedImports": "error",
@@ -55,13 +56,16 @@
       }
     }
   },
-  "organizeImports": { "enabled": true },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "css": {
+    "parser": { "cssModules": false, "tailwindDirectives": true }
+  },
   "javascript": {
     "formatter": { "quoteStyle": "double", "trailingCommas": "all" }
   },
   "overrides": [
     {
-      "include": ["**/*.test.ts", "**/test/**/*.ts", "**/tests/**/*.ts"],
+      "includes": ["**/*.test.ts", "**/test/**/*.ts", "**/tests/**/*.ts"],
       "linter": {
         "rules": {
           "suspicious": { "noExplicitAny": "off" },
@@ -71,7 +75,7 @@
       }
     },
     {
-      "include": ["examples/**"],
+      "includes": ["**/examples/**"],
       "linter": {
         "rules": {
           "correctness": { "noUnusedVariables": "warn" }
@@ -79,7 +83,7 @@
       }
     },
     {
-      "include": [
+      "includes": [
         "**/app/icon.tsx",
         "**/app/apple-icon.tsx",
         "**/app/opengraph-image.tsx",

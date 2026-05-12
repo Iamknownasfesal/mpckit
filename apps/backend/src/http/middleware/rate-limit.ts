@@ -1,7 +1,3 @@
-import { env } from "@/config/env";
-import { log } from "@/config/log";
-import { AuthError, principalFor } from "@/http/middleware/auth";
-import { loggerFor } from "@/http/middleware/request-logger";
 import { Elysia } from "elysia";
 /**
  * Redis token-bucket rate limiter.
@@ -18,6 +14,10 @@ import { Elysia } from "elysia";
  * misbehaves.
  */
 import IORedis, { type Redis } from "ioredis";
+import { env } from "@/config/env";
+import { log } from "@/config/log";
+import { AuthError, principalFor } from "@/http/middleware/auth";
+import { loggerFor } from "@/http/middleware/request-logger";
 
 const DEFAULT_CAPACITY = 60; // tokens per window
 const DEFAULT_REFILL_PER_SEC = 1; // 60 / 60s window

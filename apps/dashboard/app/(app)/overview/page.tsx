@@ -1,16 +1,5 @@
 "use client";
 
-import { AddPasskeyBanner } from "@/components/add-passkey-banner";
-import { ActivityFeed, type AuditEvent } from "@/components/dash/activity-feed";
-import { CopyMono } from "@/components/dash/mono";
-import { PageHeader } from "@/components/dash/page-header";
-import { StatusPill } from "@/components/dash/status-pill";
-import { Tile, TileBody, TileHeader } from "@/components/dash/tile";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { api } from "@/lib/api";
-import { useSession } from "@/lib/auth-client";
-import { useNetwork } from "@/lib/network";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -24,6 +13,17 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { AddPasskeyBanner } from "@/components/add-passkey-banner";
+import { ActivityFeed, type AuditEvent } from "@/components/dash/activity-feed";
+import { CopyMono } from "@/components/dash/mono";
+import { PageHeader } from "@/components/dash/page-header";
+import { StatusPill } from "@/components/dash/status-pill";
+import { Tile, TileBody, TileHeader } from "@/components/dash/tile";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { api } from "@/lib/api";
+import { useSession } from "@/lib/auth-client";
+import { useNetwork } from "@/lib/network";
 
 type BalanceRes = { creditsMicro: string; creditsUsd: string };
 type KeysRes = {

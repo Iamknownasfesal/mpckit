@@ -1,13 +1,3 @@
-import {
-  acceptUserShare,
-  fetchDwalletOnchainState,
-  getDwalletForUser,
-  listDwalletsForUser,
-  onboardZeroTrust,
-} from "@/features/dwallets/service";
-import { requestNetwork, requireAuth } from "@/http/middleware/auth";
-import type { DWallet } from "@/shared/db/schema";
-import { errors } from "@/shared/errors";
 /**
  *   POST /v1/dwallets               create a new dwallet (zero-trust DKG;
  *                                    creates the user's account if needed)
@@ -21,6 +11,16 @@ import { errors } from "@/shared/errors";
  *                                    cheaply so we proxy through here)
  */
 import { Elysia, t } from "elysia";
+import {
+  acceptUserShare,
+  fetchDwalletOnchainState,
+  getDwalletForUser,
+  listDwalletsForUser,
+  onboardZeroTrust,
+} from "@/features/dwallets/service";
+import { requestNetwork, requireAuth } from "@/http/middleware/auth";
+import type { DWallet } from "@/shared/db/schema";
+import { errors } from "@/shared/errors";
 
 const HEX = /^[0-9a-fA-F]+$/;
 

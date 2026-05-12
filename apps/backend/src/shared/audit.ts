@@ -8,7 +8,7 @@ import { getDb, isDbConfigured } from "@/shared/db/client";
  * couldn't write to the audit log would be worse than dropping the
  * audit line.
  */
-import { type NewAuditEvent, auditLog } from "@/shared/db/schema";
+import { auditLog, type NewAuditEvent } from "@/shared/db/schema";
 
 export interface AuditInput {
   event: string;

@@ -1,12 +1,3 @@
-import { type IkaNetwork, env } from "@/config/env";
-import { log } from "@/config/log";
-import { microUsdFromAtomic } from "@/features/pricing/price-feed";
-import { deriveDepositKeypair } from "@/shared/billing/derive";
-import { getDb } from "@/shared/db/client";
-import { billingDeposits } from "@/shared/db/schema";
-import { errors } from "@/shared/errors";
-import { getSuiClient } from "@/shared/sui/client";
-import { getHotWallet } from "@/shared/sui/hot-wallet";
 /**
  * Drain a per-user deposit address into the main billing treasury via
  * a sponsored Sui transaction:
@@ -30,6 +21,15 @@ import { getHotWallet } from "@/shared/sui/hot-wallet";
  */
 import { Transaction } from "@mysten/sui/transactions";
 import { eq } from "drizzle-orm";
+import { env, type IkaNetwork } from "@/config/env";
+import { log } from "@/config/log";
+import { microUsdFromAtomic } from "@/features/pricing/price-feed";
+import { deriveDepositKeypair } from "@/shared/billing/derive";
+import { getDb } from "@/shared/db/client";
+import { billingDeposits } from "@/shared/db/schema";
+import { errors } from "@/shared/errors";
+import { getSuiClient } from "@/shared/sui/client";
+import { getHotWallet } from "@/shared/sui/hot-wallet";
 
 export interface SweepResult {
   status: "swept" | "below-threshold" | "empty";
