@@ -1,0 +1,21 @@
+# Files in this list require approval from the listed reviewers
+# before they can be merged. Branch protection on `main` must also be
+# enabled for this file to be enforced.
+#
+# Format: `path/pattern  @owner1 @owner2`. Later matches win.
+
+# Default: any change in the repo needs my review.
+*                               @Iamknownasfesal
+
+# Workflow files have privileged access to repo secrets at runtime.
+# A malicious edit can leak the kubeconfig, npm publish token, or
+# anything else in Settings -> Secrets. Hard-pin to me; never auto-merge.
+/.github/workflows/             @Iamknownasfesal
+/.github/CODEOWNERS             @Iamknownasfesal
+
+# Cluster / CI manifests can change what runs in production.
+/infra/                         @Iamknownasfesal
+
+# RBAC + bootstrap manifests must not be widened without explicit review.
+/infra/k8s/ci/                  @Iamknownasfesal
+/infra/k8s/base/namespace.yaml  @Iamknownasfesal
