@@ -71,12 +71,21 @@ spec:
               port: http
             initialDelaySeconds: 15
             periodSeconds: 5
+            # Default timeout is 1s; Bun + WASM presign minting can
+            # block the event loop briefly during pg-boss work, so a
+            # 1s timeout flaps under load. 5s gives real headroom.
+            timeoutSeconds: 5
           livenessProbe:
             httpGet:
               path: /v1/health
               port: http
             initialDelaySeconds: 60
             periodSeconds: 30
+            timeoutSeconds: 5
+            # 5 x 30s = 150s of confirmed unresponsiveness before
+            # SIGTERM, which is the real "this pod is dead" signal,
+            # not "the WASM signer hogged the event loop for 1.2s".
+            failureThreshold: 5
           # Graceful shutdown: terminus drains in-flight requests on
           # SIGTERM, pg-boss waits for handlers to settle. 30s covers
           # the slowest sign path comfortably.
