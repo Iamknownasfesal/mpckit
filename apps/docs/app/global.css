@@ -11,10 +11,9 @@
   --font-mono: var(--font-mono), ui-monospace, "SFMono-Regular", monospace;
 }
 
-/* App-specific overrides on top of the fumadocs-ui preset/black theme. */
-:root {
-  --color-fd-primary: oklch(78% 0.13 195);
-}
+/* App-specific overrides on top of the fumadocs-ui preset/black theme.
+   Site is dark-only (forcedTheme="dark" + html.dark), so we set the
+   primary on .dark and skip the light :root variant. */
 .dark {
   --color-fd-primary: oklch(82% 0.14 195);
 }

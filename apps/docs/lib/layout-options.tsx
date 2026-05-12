@@ -11,6 +11,7 @@ export const baseOptions: BaseLayoutProps = {
       </span>
     ),
   },
+  themeSwitch: { enabled: false },
   links: [
     { text: "Documentation", url: "/docs" },
     { text: "Console", url: DASHBOARD_URL, external: true },
