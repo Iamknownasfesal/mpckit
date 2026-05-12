@@ -16,7 +16,7 @@ import { suiRpcLatency } from "@/shared/cache/metrics";
  * whether the call was retried, short-circuited, or successful.
  */
 import CircuitBreaker from "opossum";
-import pRetry, { type FailedAttemptError } from "p-retry";
+import pRetry, { type RetryContext } from "p-retry";
 
 const breakers = new Map<
   string,
@@ -149,14 +149,14 @@ export async function callResilient<T>(
       minTimeout: 100,
       maxTimeout: 2_000,
       randomize: true,
-      shouldRetry: (e: FailedAttemptError) => !isPermanent(e),
-      onFailedAttempt: (e: FailedAttemptError) => {
+      shouldRetry: (ctx: RetryContext) => !isPermanent(ctx.error),
+      onFailedAttempt: (ctx: RetryContext) => {
         log.warn(
           {
             op: opts.name,
-            attempt: e.attemptNumber,
-            retriesLeft: e.retriesLeft,
-            err: e.message,
+            attempt: ctx.attemptNumber,
+            retriesLeft: ctx.retriesLeft,
+            err: ctx.error.message,
           },
           "sui rpc attempt failed",
         );
