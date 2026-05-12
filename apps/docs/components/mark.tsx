@@ -3,6 +3,11 @@
  * and a smaller moon inside the gap whose bite faces the opposite
  * direction (bottom-right). The two crescents read as parties combining
  * into one signature: the MPC ceremony, geometrically.
+ *
+ * Implemented as two `fill-rule="evenodd"` paths so each crescent is a
+ * single filled shape with a circular hole. No SVG masks, no clipPaths,
+ * no background-matching tricks — renders identically across browsers
+ * and at every size from favicon to hero.
  */
 type Props = {
   size?: number;
@@ -20,29 +25,15 @@ export function Mark({ size = 28, className }: Props) {
       aria-label="MPCKit"
       role="img"
     >
-      <defs>
-        <mask id="mpckit-docs-mark-moon" maskUnits="userSpaceOnUse">
-          <rect width="100" height="100" fill="white" />
-          <circle cx="27" cy="27" r="25" fill="black" />
-        </mask>
-        <mask id="mpckit-docs-mark-small" maskUnits="userSpaceOnUse">
-          <rect width="100" height="100" fill="white" />
-          <circle cx="36" cy="36" r="5" fill="black" />
-        </mask>
-      </defs>
-      <circle
-        cx="50"
-        cy="50"
-        r="35"
+      <path
         fill="currentColor"
-        mask="url(#mpckit-docs-mark-moon)"
+        fillRule="evenodd"
+        d="M50,50 m-35,0 a35,35 0 1,0 70,0 a35,35 0 1,0 -70,0 M27,27 m-25,0 a25,25 0 1,0 50,0 a25,25 0 1,0 -50,0"
       />
-      <circle
-        cx="31"
-        cy="31"
-        r="7"
+      <path
         fill="currentColor"
-        mask="url(#mpckit-docs-mark-small)"
+        fillRule="evenodd"
+        d="M31,31 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 M36,36 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0"
       />
     </svg>
   );
