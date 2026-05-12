@@ -1,6 +1,6 @@
 {
   "name": "@mpckit/core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Shared types and BCS schemas used by the MpcKit SDK.",
   "license": "BSD-3-Clause",
   "author": "fesal <fesal@dwalletlabs.com>",
