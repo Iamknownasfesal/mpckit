@@ -59,6 +59,25 @@ function build(): AuthInstance | null {
 
   const db = getDb();
 
+  // The dashboard proxies /api/auth/* through its own origin, so the
+  // state cookie Better-Auth sets pre-OAuth lands on the dashboard
+  // host (app.mpckit.xyz). The GitHub callback then comes back to the
+  // backend host (api.mpckit.xyz) directly, where that cookie isn't
+  // visible -> state_mismatch. Setting Domain to the shared parent
+  // (mpckit.xyz) lets both subdomains read it. Skip for localhost /
+  // raw IP self-host setups where there's nothing to share.
+  const cookieDomain = (() => {
+    try {
+      const host = new URL(baseURL).hostname;
+      if (host === "localhost" || /^[\d.]+$/.test(host)) return undefined;
+      const parts = host.split(".");
+      if (parts.length < 2) return undefined;
+      return parts.slice(-2).join(".");
+    } catch {
+      return undefined;
+    }
+  })();
+
   const options: BetterAuthOptions = {
     secret,
     baseURL,
@@ -98,6 +117,9 @@ function build(): AuthInstance | null {
         sameSite: "lax",
         secure: env.NODE_ENV === "production",
       },
+      crossSubDomainCookies: cookieDomain
+        ? { enabled: true, domain: cookieDomain }
+        : undefined,
     },
 
     // Email + password is explicitly off — operator decision: no
