@@ -10,9 +10,13 @@ reads and no exec.
 
 ## One-time bootstrap
 
-Run once with your admin kubeconfig:
+Run once with your admin kubeconfig. The `Namespace` and the CI
+`ServiceAccount`/`Role`/`Secret` are cluster-scoped (or live in a
+namespace that doesn't yet exist) so the scoped CI identity can't
+create them — admin has to:
 
 ```sh
+kubectl apply -f infra/k8s/base/namespace.yaml
 kubectl apply -f infra/k8s/ci/rbac.yaml
 ```
 

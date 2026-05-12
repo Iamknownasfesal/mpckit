@@ -7,7 +7,12 @@ kind: Kustomization
 # Deployments out via `kubectl delete -k overlays/<env>` after apply).
 
 resources:
-  - namespace.yaml
+  # namespace.yaml is bootstrap-only: an admin applies it once
+  # (`kubectl apply -f infra/k8s/base/namespace.yaml`) with their own
+  # kubeconfig before the first CI deploy. The CI ServiceAccount in
+  # infra/k8s/ci/rbac.yaml is namespace-scoped and cannot touch
+  # cluster-scoped resources like Namespace, so keeping it out of the
+  # kustomize tree avoids a `forbidden` error on every apply.
   - postgres.yaml
   - redis.yaml
   - gas-station.yaml
