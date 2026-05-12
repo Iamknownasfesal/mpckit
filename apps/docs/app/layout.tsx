@@ -73,11 +73,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c1a1a" },
-  ],
-  colorScheme: "dark light",
+  themeColor: "#0c1a1a",
+  colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
 };
@@ -87,10 +84,18 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable}`}
+      className={`dark ${sans.variable} ${mono.variable}`}
     >
       <body className="flex min-h-screen flex-col font-sans">
-        <RootProvider>{children}</RootProvider>
+        <RootProvider
+          theme={{
+            forcedTheme: "dark",
+            defaultTheme: "dark",
+            enableSystem: false,
+          }}
+        >
+          {children}
+        </RootProvider>
       </body>
     </html>
   );

@@ -52,14 +52,7 @@ function Hero() {
 
         <div className="relative z-10 grid grid-cols-1 gap-12 px-6 py-16 md:grid-cols-12 md:gap-10 md:px-12 md:py-24">
           <div className="md:col-span-7">
-            <span className="t-mono inline-flex items-center gap-2 rounded-full border bg-fd-card/70 px-3 py-1.5 text-[11.5px] uppercase tracking-[0.16em] text-fd-muted-foreground backdrop-blur-md">
-              <span className="size-1.5 rounded-full bg-emerald-500" />
-              Live on Sui mainnet
-              <span className="text-fd-muted-foreground/60">·</span>
-              powered by 2PC-MPC
-            </span>
-
-            <h1 className="mt-9 text-balance text-[44px] font-semibold leading-[0.95] tracking-[-0.04em] md:text-[88px]">
+            <h1 className="text-balance text-[44px] font-semibold leading-[0.95] tracking-[-0.04em] md:text-[88px]">
               Sign on every chain.
               <br />
               <span className="text-fd-primary">From one API.</span>
@@ -654,10 +647,6 @@ function SiteFooter() {
               The signing API for every chain that matters. Hosted MPC, settled
               on Sui, billed by the signature.
             </p>
-            <p className="t-mono mt-6 inline-flex items-center gap-2 rounded-full border bg-fd-card/70 px-3 py-1.5 text-[10.5px] uppercase tracking-[0.16em] text-fd-muted-foreground">
-              <span className="size-1.5 rounded-full bg-emerald-500" />
-              All systems go
-            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-10 md:col-span-7 md:grid-cols-3">
@@ -683,12 +672,9 @@ function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col-reverse items-start gap-4 border-t pt-6 text-[12px] text-fd-muted-foreground md:flex-row md:items-center md:justify-between">
+        <div className="mt-14 border-t pt-6 text-[12px] text-fd-muted-foreground">
           <span className="t-mono">
             © 2026 MPCKit. Built on Sui, signed with care.
-          </span>
-          <span className="t-mono text-[10.5px] uppercase tracking-[0.18em]">
-            Hosted MPC · settled on Sui mainnet
           </span>
         </div>
       </div>
