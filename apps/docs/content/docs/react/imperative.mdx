@@ -1,6 +1,6 @@
 ---
 title: Imperative escape hatches
-description: useMpcKit and useEdenClient. Drop down to the underlying clients when a hook isn't enough.
+description: useMPCKit and useEdenClient. Drop down to the underlying clients when a hook isn't enough.
 ---
 
 Most of the time the typed hooks are what you want. But sometimes you
@@ -8,15 +8,15 @@ need the raw client (e.g. to call an endpoint that doesn't have a
 hook yet, batch many calls in a single effect, or pass the client to a
 non-React utility). Two hooks expose them.
 
-## `useMpcKit`
+## `useMPCKit`
 
-Returns the `MpcKit` instance the provider constructed.
+Returns the `MPCKit` instance the provider constructed.
 
 ```tsx
-import { useMpcKit } from "@mpckit/react";
+import { useMPCKit } from "@mpckit/react";
 
 function ExportRows() {
-  const api = useMpcKit();
+  const api = useMPCKit();
 
   return (
     <button
@@ -51,6 +51,6 @@ function Custom() {
 }
 ```
 
-Use this for endpoints that haven't been promoted into typed `MpcKit`
+Use this for endpoints that haven't been promoted into typed `MPCKit`
 methods yet, or when you want full type-safety against the live API
 shape (request/response, params, errors).

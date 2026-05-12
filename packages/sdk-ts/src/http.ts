@@ -1,11 +1,11 @@
 /**
  * Internal typed fetch wrapper. Public consumers reach this only via
- * `MpcKit.raw` (escape hatch) — most callers use the high-level API.
+ * `MPCKit.raw` (escape hatch) — most callers use the high-level API.
  */
 import {
-  MpcKitError,
-  MpcKitInsufficientCreditsError,
-  MpcKitTimeoutError,
+  MPCKitError,
+  MPCKitInsufficientCreditsError,
+  MPCKitTimeoutError,
 } from "./errors";
 
 export interface HttpClientOptions {
@@ -74,7 +74,7 @@ export class HttpClient {
       });
     } catch (err) {
       if ((err as { name?: string }).name === "AbortError") {
-        throw new MpcKitTimeoutError(`${method} ${path} timed out`);
+        throw new MPCKitTimeoutError(`${method} ${path} timed out`);
       }
       throw err;
     } finally {
@@ -95,8 +95,8 @@ export class HttpClient {
       const message =
         (body as { error?: string }).error ??
         `${method} ${path} failed with ${res.status}`;
-      if (res.status === 402) throw new MpcKitInsufficientCreditsError(body);
-      throw new MpcKitError(message, res.status, code, body);
+      if (res.status === 402) throw new MPCKitInsufficientCreditsError(body);
+      throw new MPCKitError(message, res.status, code, body);
     }
     return body as T;
   }

@@ -139,7 +139,7 @@ function build(): AuthInstance | null {
 
     plugins: [
       passkey({
-        rpName: "MpcKit",
+        rpName: "MPCKit",
         // rpID auto-derives from baseURL's hostname (port-independent).
         // The `origin` allowlist DOES include the port: the browser
         // creates credentials at the dashboard origin (localhost:3011

@@ -1,5 +1,5 @@
 /**
- * MpcKit brand mark. A moon with its top-left bitten out (~25% gone),
+ * MPCKit brand mark. A moon with its top-left bitten out (~25% gone),
  * and a smaller moon inside the gap whose bite faces the opposite
  * direction (bottom-right). The two crescents read as parties combining
  * into one signature: the MPC ceremony, geometrically.
@@ -17,7 +17,7 @@ export function Mark({ size = 24, className }: Props) {
       viewBox="0 0 100 100"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      aria-label="MpcKit"
+      aria-label="MPCKit"
       role="img"
     >
       <defs>

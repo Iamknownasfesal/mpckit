@@ -1,13 +1,13 @@
 /**
  * Per-step latency breakdown for onboard + sign. Replicates exactly
- * what `MpcKit.onboard()` and `MpcKit.sign()` do, but with
+ * what `MPCKit.onboard()` and `MPCKit.sign()` do, but with
  * `performance.now()` boundaries between every primitive so we can
  * see where the wall-clock latency is actually spent.
  *
  * Categories per step (so the totals are easy to read):
  *
  *   crypto    local WASM work (no network)
- *   http-api  call to MpcKit backend
+ *   http-api  call to MPCKit backend
  *   ika-rpc   call to upstream Sui gRPC (via @ika.xyz/sdk's IkaClient)
  *   mpc-wait  polling the coordinator until the network MPC settles
  *
@@ -24,8 +24,8 @@ import {
   Curve,
   Hash,
   inlineCryptoEngine,
-  MpcKit,
-  MpcKitError,
+  MPCKit,
+  MPCKitError,
   SignatureAlgorithm,
 } from "@mpckit/sdk";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
@@ -189,7 +189,7 @@ interface OnboardOutcome {
 }
 
 async function onboardWithBreakdown(
-  api: MpcKit,
+  api: MPCKit,
   ika: IkaClient,
   curve: Curve,
   seed: Uint8Array,
@@ -231,7 +231,7 @@ async function onboardWithBreakdown(
   // 4-5. Backend gives us operator address + latest encryption-key id
   //      (via /v1/network) plus protocol params (cached + boot-warmed,
   //      ~50ms hot vs ~11s via upstream Sui RPC). Issued in parallel
-  //      to mirror MpcKit.onboard.
+  //      to mirror MPCKit.onboard.
   const [networkInfo, ppBytes] = await Promise.all([
     timed(steps, "GET /v1/network", "http-api", () => api.networkInfo()),
     timed(steps, "GET /v1/protocol-parameters (backend)", "http-api", () =>
@@ -351,7 +351,7 @@ interface SignOutcome {
 }
 
 async function signWithBreakdown(
-  api: MpcKit,
+  api: MPCKit,
   ika: IkaClient,
   args: {
     curve: Curve;
@@ -542,7 +542,7 @@ function printBreakdown(label: string, rows: Step[][]): void {
 
 async function main() {
   const env = loadEnv();
-  const api = new MpcKit({
+  const api = new MPCKit({
     baseUrl: env.backendUrl,
     apiKey: env.apiKey,
     network: env.network,
@@ -588,11 +588,11 @@ async function main() {
       console.error(`[bench] sign #${i}: ${fmtMs(r.totalMs)}`);
       signRuns.push(r.steps);
     } catch (err) {
-      const code = err instanceof MpcKitError ? err.code : "UNKNOWN";
+      const code = err instanceof MPCKitError ? err.code : "UNKNOWN";
       console.error(
         `[bench] sign #${i} failed (${code}): ${String(err).slice(0, 200)}`,
       );
-      if (err instanceof MpcKitError && err.code === "PRESIGN_POOL_EMPTY") {
+      if (err instanceof MPCKitError && err.code === "PRESIGN_POOL_EMPTY") {
         console.error("[bench] cooling down 80s for refill…");
         await new Promise((r) => setTimeout(r, 80_000));
       }

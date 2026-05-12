@@ -1,12 +1,12 @@
 ---
 title: Provider
-description: MpcKitProvider config, the worker factory, and bundler shapes.
+description: MPCKitProvider config, the worker factory, and bundler shapes.
 ---
 
 ```tsx title="app/providers.tsx"
 "use client";
 
-import { MpcKitProvider } from "@mpckit/react";
+import { MPCKitProvider } from "@mpckit/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const queryClient = new QueryClient();
@@ -14,7 +14,7 @@ const queryClient = new QueryClient();
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <MpcKitProvider
+      <MPCKitProvider
         options={{
           baseUrl: "https://api.mpckit.xyz",
           apiKey: process.env.NEXT_PUBLIC_MPCKIT_API_KEY!,
@@ -29,17 +29,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
         }
       >
         {children}
-      </MpcKitProvider>
+      </MPCKitProvider>
     </QueryClientProvider>
   );
 }
 ```
 
-## `MpcKitProviderProps`
+## `MPCKitProviderProps`
 
 <TypeTable
   type={{
-    options: { description: "MpcKitOptions minus `crypto` (the provider supplies that based on `useWorker` / `crypto`).", type: "Omit<MpcKitOptions, \"crypto\">" },
+    options: { description: "MPCKitOptions minus `crypto` (the provider supplies that based on `useWorker` / `crypto`).", type: "Omit<MPCKitOptions, \"crypto\">" },
     useWorker: { description: "Drive crypto from a Web Worker constructed via `workerFactory`.", type: "boolean" },
     workerFactory: { description: "Bundler-specific Worker constructor. Required when useWorker is true.", type: "() => Worker" },
     crypto: { description: "Override the crypto engine entirely (testing, custom adapters).", type: "CryptoEngine" },
@@ -101,9 +101,9 @@ build scripts) doesn't need a worker. Drop `useWorker` and
 `workerFactory`; the inline engine runs on the calling thread.
 
 ```tsx
-<MpcKitProvider options={{ baseUrl, apiKey, network: "testnet" }}>
+<MPCKitProvider options={{ baseUrl, apiKey, network: "testnet" }}>
   {children}
-</MpcKitProvider>
+</MPCKitProvider>
 ```
 
 For client-only apps doing real-time signing, the worker keeps the UI

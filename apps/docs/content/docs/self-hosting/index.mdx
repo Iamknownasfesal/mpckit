@@ -1,15 +1,15 @@
 ---
-title: Self-hosting MpcKit
-description: Run your own MpcKit instance, pointed at testnet or mainnet, from a single VM or a Kubernetes cluster.
+title: Self-hosting MPCKit
+description: Run your own MPCKit instance, pointed at testnet or mainnet, from a single VM or a Kubernetes cluster.
 ---
 
-MpcKit is open source under BSD-3-Clause. The hosted version we
+MPCKit is open source under BSD-3-Clause. The hosted version we
 operate is one tenant of this same software. You can run an identical
 stack on your own infrastructure, against testnet, mainnet, or a fork.
 
 ## What's in the stack
 
-A self-hosted MpcKit deployment has three apps and three dependencies:
+A self-hosted MPCKit deployment has three apps and three dependencies:
 
 <Cards>
   <Card title="apps/backend" description="Bun + Elysia HTTP API and pg-boss worker. Owns the dWallet lifecycle, billing, presign pool, and Sui tx submission." />
@@ -60,5 +60,5 @@ pods serves one network. Run a second deployment with
 <Callout title="Pre-alpha vs. mainnet">
   The ika 2PC-MPC mainnet protocol is production. This repo's defaults
   target mainnet. The Solana pre-alpha mock signer is not part of the
-  MpcKit hosted layer; it lives in the recovery sibling stack.
+  MPCKit hosted layer; it lives in the recovery sibling stack.
 </Callout>

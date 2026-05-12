@@ -3,7 +3,7 @@ title: Crypto engines
 description: InlineCryptoEngine vs WebWorkerCryptoEngine. Pick the one that fits your runtime.
 ---
 
-`MpcKit` delegates DKG and centralized-signature math to a
+`MPCKit` delegates DKG and centralized-signature math to a
 `CryptoEngine`. Two implementations ship with the SDK.
 
 ## `InlineCryptoEngine`
@@ -12,9 +12,9 @@ The default. Runs the math on the calling thread. Fine for Node.js
 backends and CLI tools where blocking the event loop briefly is OK.
 
 ```ts
-import { MpcKit } from "@mpckit/sdk";
+import { MPCKit } from "@mpckit/sdk";
 
-const api = new MpcKit({
+const api = new MPCKit({
   baseUrl: "https://api.mpckit.xyz",
   apiKey,
   network: "testnet",
@@ -28,14 +28,14 @@ For browsers. Moves the WASM-heavy math off the main thread so DKG and
 signing don't block UI work or animations.
 
 ```ts
-import { MpcKit, createWebWorkerCryptoEngine } from "@mpckit/sdk";
+import { MPCKit, createWebWorkerCryptoEngine } from "@mpckit/sdk";
 
 const worker = new Worker(
   new URL("@mpckit/sdk/worker-impl", import.meta.url),
   { type: "module" },
 );
 
-const api = new MpcKit({
+const api = new MPCKit({
   baseUrl: "https://api.mpckit.xyz",
   apiKey,
   network: "testnet",

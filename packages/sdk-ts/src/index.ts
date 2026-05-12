@@ -1,7 +1,7 @@
 /**
- * `@mpckit/sdk` — TypeScript SDK for MpcKit.
+ * `@mpckit/sdk` — TypeScript SDK for MPCKit.
  *
- * Single class `MpcKit` exposes:
+ * Single class `MPCKit` exposes:
  *
  *   - HTTP introspection (`health`, `networkInfo`)
  *   - Billing (`balance`, `depositAddress`, `declareDeposit`, ...)
@@ -16,13 +16,13 @@
  */
 
 export type {
-  MpcKitOptions,
+  MPCKitOptions,
   OnboardArgs,
   OnboardResult,
   SignArgs,
   SignResult,
 } from "./api";
-export { defaultBaseUrl, MPCKIT_HOSTS, MpcKit } from "./api";
+export { defaultBaseUrl, MPCKIT_HOSTS, MPCKit } from "./api";
 export type { Network } from "./constants";
 
 export { Curve, Hash, SignatureAlgorithm } from "./constants";
@@ -33,9 +33,9 @@ export {
   WebWorkerCryptoEngine,
 } from "./crypto/web-worker";
 export {
-  MpcKitError,
-  MpcKitInsufficientCreditsError,
-  MpcKitTimeoutError,
+  MPCKitError,
+  MPCKitInsufficientCreditsError,
+  MPCKitTimeoutError,
 } from "./errors";
 export type {
   ApiKey,

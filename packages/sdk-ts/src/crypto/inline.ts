@@ -190,7 +190,7 @@ async function sessionId(seed: Uint8Array, curve: Curve): Promise<string> {
 /**
  * Build the smallest `IkaClient`-shaped stub that satisfies what
  * `prepareDKGAsync` actually reads. Avoids dragging the full network
- * client into the engine; the `MpcKit` orchestrates network calls.
+ * client into the engine; the `MPCKit` orchestrates network calls.
  */
 function makeIkaClientStub(args: {
   protocolPublicParameters: Uint8Array;

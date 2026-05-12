@@ -30,8 +30,8 @@ import { createHash } from "node:crypto";
 import {
   Curve,
   Hash,
-  MpcKit,
-  MpcKitError,
+  MPCKit,
+  MPCKitError,
   SignatureAlgorithm,
 } from "@mpckit/sdk";
 
@@ -113,13 +113,13 @@ function loadEnv() {
 
 /**
  * Instrumented onboard. We can't reach into the SDK to time individual
- * sub-steps, so we recreate the ceremony here using `MpcKit.raw`-style
+ * sub-steps, so we recreate the ceremony here using `MPCKit.raw`-style
  * HTTP calls plus the public crypto helpers. That gives us a clean
  * per-step timeline at the cost of duplicating ~50 lines of the SDK's
  * onboard. Worth it for the diagnostic visibility.
  */
 async function timedOnboard(
-  api: MpcKit,
+  api: MPCKit,
   curve: Curve,
   seed: Uint8Array,
 ): Promise<{
@@ -155,7 +155,7 @@ async function timedOnboard(
 }
 
 async function timedSign(
-  api: MpcKit,
+  api: MPCKit,
   args: {
     seed: Uint8Array;
     curve: Curve;
@@ -204,7 +204,7 @@ async function timedSign(
         coldRetried,
       };
     } catch (err) {
-      if (err instanceof MpcKitError && err.code === "PRESIGN_POOL_EMPTY") {
+      if (err instanceof MPCKitError && err.code === "PRESIGN_POOL_EMPTY") {
         coldRetried = true;
         await new Promise((r) => setTimeout(r, 75_000));
         t0 = performance.now();
@@ -241,7 +241,7 @@ function summarise(records: RunRecord[]): {
 
 async function main() {
   const env = loadEnv();
-  const api = new MpcKit({
+  const api = new MPCKit({
     baseUrl: env.backendUrl,
     apiKey: env.apiKey,
     network: env.network,
@@ -280,7 +280,7 @@ async function main() {
       // out of the average.
       if (!coldRetried) signRuns.push(record);
     } catch (err) {
-      const code = err instanceof MpcKitError ? err.code : "UNKNOWN";
+      const code = err instanceof MPCKitError ? err.code : "UNKNOWN";
       console.error(
         `[bench] sign #${i} FAILED ${code}: ${String(err).slice(0, 200)}`,
       );

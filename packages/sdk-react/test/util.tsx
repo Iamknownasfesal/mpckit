@@ -1,12 +1,12 @@
 /**
- * Shared test fixtures for the React SDK. Wraps `MpcKitProvider` in a
+ * Shared test fixtures for the React SDK. Wraps `MPCKitProvider` in a
  * fresh `QueryClient` per test so cache state doesn't leak between
  * cases. Hooks under test get a synchronous-friendly Query setup
  * (retry off, no caching) for predictable assertions.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { MpcKitProvider } from "../src/provider";
+import { MPCKitProvider } from "../src/provider";
 
 export function makeQueryClient(): QueryClient {
   return new QueryClient({
@@ -28,7 +28,7 @@ export function Providers({
 }) {
   return (
     <QueryClientProvider client={qc}>
-      <MpcKitProvider
+      <MPCKitProvider
         options={{
           baseUrl: "http://localhost:0",
           apiKey: "test",
@@ -37,7 +37,7 @@ export function Providers({
         }}
       >
         {children}
-      </MpcKitProvider>
+      </MPCKitProvider>
     </QueryClientProvider>
   );
 }

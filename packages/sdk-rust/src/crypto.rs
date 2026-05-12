@@ -27,7 +27,7 @@ use fastcrypto::hash::{Blake2b256, HashFunction, Keccak256};
 use fastcrypto::traits::{KeyPair, Signer, ToFromBytes};
 
 use crate::constants::{Curve, Hash, SignatureAlgorithm};
-use crate::error::{MpcKitError, Result};
+use crate::error::{MPCKitError, Result};
 
 const CG_DOMAIN: &[u8] = b"CLASS_GROUPS_DECRYPTION_KEY_V1";
 const ED_DOMAIN: &[u8] = b"ED25519_SIGNING_KEY_V1";
@@ -61,9 +61,9 @@ impl UserShareEncryptionKeys {
         let signing_seed = derive_seed(ED_DOMAIN, curve_byte, seed);
         let (encryption_key, decryption_key) =
             generate_cg_keypair_from_seed(curve_byte as u32, cg_seed)
-                .map_err(|e| MpcKitError::Crypto(format!("generate_cg_keypair_from_seed: {e}")))?;
+                .map_err(|e| MPCKitError::Crypto(format!("generate_cg_keypair_from_seed: {e}")))?;
         let private = Ed25519PrivateKey::from_bytes(&signing_seed)
-            .map_err(|e| MpcKitError::Crypto(format!("Ed25519PrivateKey::from_bytes: {e}")))?;
+            .map_err(|e| MPCKitError::Crypto(format!("Ed25519PrivateKey::from_bytes: {e}")))?;
         let signing_keypair = Ed25519KeyPair::from(private);
         Ok(Self {
             encryption_key,
@@ -163,14 +163,14 @@ pub fn prepare_dkg(
     let session_id = compute_session_id(&sender_bytes, session_id_random);
     let curve_u32 = keys.curve.as_u8() as u32;
     let dkg = create_dkg_output_by_curve_v2(curve_u32, protocol_pp.to_vec(), session_id)
-        .map_err(|e| MpcKitError::Crypto(format!("create_dkg_output_by_curve_v2: {e}")))?;
+        .map_err(|e| MPCKitError::Crypto(format!("create_dkg_output_by_curve_v2: {e}")))?;
     let encrypted = encrypt_secret_key_share_and_prove_v2(
         curve_u32,
         dkg.centralized_secret_output.clone(),
         keys.encryption_key.clone(),
         protocol_pp.to_vec(),
     )
-    .map_err(|e| MpcKitError::Crypto(format!("encrypt_secret_key_share_and_prove_v2: {e}")))?;
+    .map_err(|e| MPCKitError::Crypto(format!("encrypt_secret_key_share_and_prove_v2: {e}")))?;
     Ok(DkgOutput {
         user_dkg_message: dkg.public_key_share_and_proof,
         user_public_output: dkg.public_output,
@@ -204,7 +204,7 @@ pub fn centralized_sign(
         relative_sig_algo as u32,
         relative_hash as u32,
     )
-    .map_err(|e| MpcKitError::Crypto(format!("advance_centralized_sign_party: {e}")))
+    .map_err(|e| MPCKitError::Crypto(format!("advance_centralized_sign_party: {e}")))
 }
 
 /// Map our globally-numbered `(SignatureAlgorithm, Hash)` enums to the
@@ -228,7 +228,7 @@ pub fn relative_sig_and_hash(
     use Hash::*;
     use SignatureAlgorithm::*;
     let invalid = || {
-        MpcKitError::Invalid(format!(
+        MPCKitError::Invalid(format!(
             "invalid (curve, sig_algo, hash) combination: ({curve:?}, {sig_algo:?}, {hash:?})"
         ))
     };
@@ -305,5 +305,5 @@ fn compute_session_id(sender_bytes: &[u8], user_bytes: &[u8]) -> Vec<u8> {
 fn parse_hex_address(s: &str) -> Result<Vec<u8>> {
     let stripped = s.strip_prefix("0x").unwrap_or(s);
     hex::decode(stripped)
-        .map_err(|e| MpcKitError::Invalid(format!("invalid hex address {s:?}: {e}")))
+        .map_err(|e| MPCKitError::Invalid(format!("invalid hex address {s:?}: {e}")))
 }

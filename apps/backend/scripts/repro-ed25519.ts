@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
  * the matrix's "42…" seed, the bug is on-chain residue from a prior
  * abandoned attempt with that exact encryption_key_address.
  */
-import { Curve, MpcKit, MpcKitError } from "@mpckit/sdk";
+import { Curve, MPCKit, MPCKitError } from "@mpckit/sdk";
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 if (!ADMIN_API_KEY) throw new Error("ADMIN_API_KEY required");
@@ -30,7 +30,7 @@ async function createUser(): Promise<{ userId: string; apiKey: string }> {
   return { userId: j.user.id, apiKey: j.key.plaintext };
 }
 
-async function fundUser(api: MpcKit): Promise<void> {
+async function fundUser(api: MPCKit): Promise<void> {
   const { address } = await api.depositAddress();
   console.error(`[repro] deposit address: ${address}`);
   // Caller responsible for funding via sui CLI; we just await balance.
@@ -49,7 +49,7 @@ function seed(label: string): Uint8Array {
 }
 
 async function tryOnboard(
-  api: MpcKit,
+  api: MPCKit,
   label: string,
   s: Uint8Array,
 ): Promise<void> {
@@ -64,7 +64,7 @@ async function tryOnboard(
       `[repro] OK ${label}: dwallet=${r.dwallet.id} sui=${r.dwallet.suiDwalletId}`,
     );
   } catch (err) {
-    if (err instanceof MpcKitError) {
+    if (err instanceof MPCKitError) {
       console.error(`[repro] FAIL ${label}: ${err.code}: ${err.message}`);
     } else {
       console.error(`[repro] FAIL ${label}:`, err);
@@ -77,7 +77,7 @@ async function main() {
     ? { apiKey: process.env.MPCKIT_API_KEY, userId: "(reused)" }
     : await createUser();
   console.error(`[repro] user=${env.userId}`);
-  const api = new MpcKit({
+  const api = new MPCKit({
     baseUrl: BACKEND_URL,
     apiKey: env.apiKey,
     network: "testnet",

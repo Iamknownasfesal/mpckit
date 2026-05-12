@@ -3,7 +3,7 @@
  * backend returned so callers can branch on `code` (the stable
  * machine-readable identifier) rather than parsing message text.
  */
-export class MpcKitError extends Error {
+export class MPCKitError extends Error {
   constructor(
     message: string,
     public readonly status: number,
@@ -11,20 +11,20 @@ export class MpcKitError extends Error {
     public readonly body: unknown,
   ) {
     super(message);
-    this.name = "MpcKitError";
+    this.name = "MPCKitError";
   }
 }
 
-export class MpcKitTimeoutError extends Error {
+export class MPCKitTimeoutError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "MpcKitTimeoutError";
+    this.name = "MPCKitTimeoutError";
   }
 }
 
-export class MpcKitInsufficientCreditsError extends MpcKitError {
+export class MPCKitInsufficientCreditsError extends MPCKitError {
   constructor(body: unknown) {
     super("insufficient credits", 402, "INSUFFICIENT_CREDITS", body);
-    this.name = "MpcKitInsufficientCreditsError";
+    this.name = "MPCKitInsufficientCreditsError";
   }
 }

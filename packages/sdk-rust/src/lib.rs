@@ -1,4 +1,4 @@
-//! `mpckit` - Rust SDK for MpcKit.
+//! `mpckit` - Rust SDK for MPCKit.
 //!
 //! v1 covers the HTTP surface only: introspection, billing, dwallet
 //! state, and the two-phase sign API. The high-level zero-trust DKG +
@@ -7,13 +7,13 @@
 //! once the upstream Rust crate is wired in.
 //!
 //! ```no_run
-//! use mpckit::{MpcKit, Network};
+//! use mpckit::{MPCKit, Network};
 //!
 //! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! // Defaults to https://api.testnet.mpckit.xyz for testnet,
 //! // https://api.mpckit.xyz for mainnet. Pass `.base_url(...)` to override
 //! // (self-hosting, dev).
-//! let api = MpcKit::builder()
+//! let api = MPCKit::builder()
 //!     .api_key("mpckit_test_…")
 //!     .network(Network::Testnet)
 //!     .build()?;
@@ -31,7 +31,7 @@ mod types;
 #[cfg(feature = "crypto")]
 mod crypto;
 
-pub use client::{new_idempotency_key, Balance, MpcKit, MpcKitBuilder};
+pub use client::{new_idempotency_key, Balance, MPCKit, MPCKitBuilder};
 #[cfg(feature = "crypto")]
 pub use client::{OnboardArgs, OnboardResult, SignArgs, SignResult};
 pub use constants::{Curve, Hash, Network, SignatureAlgorithm};
@@ -39,7 +39,7 @@ pub use constants::{Curve, Hash, Network, SignatureAlgorithm};
 pub use crypto::{
     centralized_sign, prepare_dkg, relative_sig_and_hash, DkgOutput, UserShareEncryptionKeys,
 };
-pub use error::{MpcKitError, Result};
+pub use error::{MPCKitError, Result};
 pub use types::{
     AcceptDWalletResponse, ApiKey, BillingCharge, BillingDeposit, BillingHistory, BillingPricing,
     DWallet, DWalletKind, DWalletResponse, DWalletStatus, DepositAddress, DepositDeclareResponse,

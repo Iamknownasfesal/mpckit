@@ -47,9 +47,9 @@ but it's exposed here for diagnostics and self-hosted crypto engines.
 
 The on-chain protocol public parameters for the given curve. Returned
 as `Uint8Array`. The backend pre-computes these at boot and serves
-them from an LRU cache, so going through `MpcKit` is dramatically
+them from an LRU cache, so going through `MPCKit` is dramatically
 faster than fetching the chunked table-vec from a Sui fullnode
-directly. The SDK also caches the result on the `MpcKit` instance
+directly. The SDK also caches the result on the `MPCKit` instance
 until you call `invalidateProtocolParametersCache()`.
 
 ```ts

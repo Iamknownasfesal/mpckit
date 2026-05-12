@@ -5,7 +5,7 @@
  * deployment (e.g. *-testnet.mpckit.xyz).
  */
 
-export const SITE_NAME = "MpcKit";
+export const SITE_NAME = "MPCKit";
 
 export const SITE_TAGLINE = "Sign on every chain from one API.";
 

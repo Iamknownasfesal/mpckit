@@ -14,7 +14,7 @@
 use std::env;
 use std::process::ExitCode;
 
-use mpckit::{Curve, Hash, MpcKit, Network, OnboardArgs, SignArgs, SignatureAlgorithm};
+use mpckit::{Curve, Hash, MPCKit, Network, OnboardArgs, SignArgs, SignatureAlgorithm};
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -40,7 +40,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut seed = [0u8; 32];
     seed.copy_from_slice(&seed_bytes);
 
-    let mut builder = MpcKit::builder().api_key(&api_key).network(network);
+    let mut builder = MPCKit::builder().api_key(&api_key).network(network);
     if let Some(url) = base_url.as_deref() {
         builder = builder.base_url(url);
     }

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "nodejs";
 export const alt =
-  "MpcKit Console: issue keys, top up billing, inspect dWallets.";
+  "MPCKit Console: issue keys, top up billing, inspect dWallets.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -63,7 +63,7 @@ export default function OpenGraphImage() {
               display: "flex",
             }}
           >
-            MpcKit
+            MPCKit
           </div>
           <div
             style={{

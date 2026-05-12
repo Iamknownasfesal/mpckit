@@ -1,7 +1,7 @@
 {
   "name": "@mpckit/react",
-  "version": "0.2.1",
-  "description": "TanStack Query bindings for the MpcKit SDK.",
+  "version": "0.3.0",
+  "description": "TanStack Query bindings for the MPCKit SDK.",
   "license": "BSD-3-Clause",
   "author": "fesal <fesal@dwalletlabs.com>",
   "homepage": "https://mpckit.xyz",

@@ -53,7 +53,7 @@ RUN cd apps/dashboard && bun run build
 # ---- runtime stage ----------------------------------------------------
 FROM node:${NODE_VERSION} AS runtime
 LABEL org.opencontainers.image.source="https://github.com/iamknownasfesal/mpckit"
-LABEL org.opencontainers.image.description="MpcKit dashboard (Next.js 15)"
+LABEL org.opencontainers.image.description="MPCKit dashboard (Next.js 15)"
 LABEL org.opencontainers.image.licenses="BSD-3-Clause"
 WORKDIR /app
 

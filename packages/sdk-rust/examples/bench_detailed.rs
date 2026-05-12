@@ -1,6 +1,6 @@
 //! Per-step latency bench for the Rust SDK's onboard + sign
 //! ceremonies. Mirrors `apps/backend/scripts/bench-detailed.ts`:
-//! replicates the `MpcKit::onboard` / `MpcKit::sign` orchestration
+//! replicates the `MPCKit::onboard` / `MPCKit::sign` orchestration
 //! step by step so each primitive's wall-clock cost is measurable,
 //! then reports min / avg / p50 / p95 / p99 / max per step + per
 //! category (`crypto` / `http-api` / `mpc-wait`).
@@ -22,7 +22,7 @@ use std::env;
 use std::time::{Duration, Instant};
 
 use mpckit::{
-    centralized_sign, prepare_dkg, relative_sig_and_hash, Curve, EncryptionKeyCreate, Hash, MpcKit,
+    centralized_sign, prepare_dkg, relative_sig_and_hash, Curve, EncryptionKeyCreate, Hash, MPCKit,
     Network, OnboardZeroTrustRequest, SignPrepareRequest, SignRequestStatus, SignSubmitRequest,
     SignatureAlgorithm, UserShareEncryptionKeys,
 };
@@ -125,7 +125,7 @@ fn random_bytes_32() -> Vec<u8> {
 }
 
 async fn onboard_breakdown(
-    api: &MpcKit,
+    api: &MPCKit,
     curve: Curve,
     seed: &[u8; 32],
 ) -> Result<(Vec<Step>, OnboardOutcome), Box<dyn std::error::Error>> {
@@ -269,7 +269,7 @@ struct OnboardOutcome {
 }
 
 async fn sign_breakdown(
-    api: &MpcKit,
+    api: &MPCKit,
     onboard: &OnboardOutcome,
     curve: Curve,
     sig_algo: SignatureAlgorithm,
@@ -281,7 +281,7 @@ async fn sign_breakdown(
     let idem = format!("bench-rust-{iter}-{}", Uuid::new_v4());
 
     // Move coordinator validates `(sig, hash)` per chain-relative
-    // numbering — same remap the high-level `MpcKit::sign` does
+    // numbering — same remap the high-level `MPCKit::sign` does
     // internally before posting phase 1.
     let (rel_sig, rel_hash) = relative_sig_and_hash(curve, sig_algo, hash)?;
 
@@ -303,7 +303,7 @@ async fn sign_breakdown(
     .await?;
 
     // Active dwallet state + protocol params (parallel, like in
-    // MpcKit::sign).
+    // MPCKit::sign).
     let active_t0 = Instant::now();
     let (active_state, protocol_pp) = tokio::try_join!(
         api.dwallet_onchain_state(&onboard.dwallet_id, "active", 60_000),
@@ -518,7 +518,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|s| s.parse().ok())
         .unwrap_or(4);
 
-    let api = MpcKit::builder()
+    let api = MPCKit::builder()
         .base_url(&backend_url)
         .api_key(&api_key)
         .network(network)

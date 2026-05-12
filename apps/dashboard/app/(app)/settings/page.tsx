@@ -158,7 +158,7 @@ function ProfileCard() {
       <TileHeader
         kicker="Identity"
         title="Profile"
-        description="How you appear in MpcKit."
+        description="How you appear in MPCKit."
       />
       <TileBody className="pt-7">
         <div className="flex items-center gap-5">

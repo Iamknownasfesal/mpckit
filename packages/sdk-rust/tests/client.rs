@@ -9,20 +9,20 @@
 //!   3. `/v1/billing/deposit` round-trips the `txDigest` body and the
 //!      response shape.
 //!
-//!   4. 402 responses surface as `MpcKitError::InsufficientCredits`.
+//!   4. 402 responses surface as `MPCKitError::InsufficientCredits`.
 //!
 //!   5. `sign_prepare` includes the `idempotency-key` header so phase-1
 //!      retries are server-side dedup'd.
 //!
 //!   6. Builder rejects missing required fields.
 
-use mpckit::{Curve, MpcKit, MpcKitError, Network};
+use mpckit::{Curve, MPCKit, MPCKitError, Network};
 use serde_json::json;
 use wiremock::matchers::{body_json, header, header_exists, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-async fn build(server: &MockServer) -> MpcKit {
-    MpcKit::builder()
+async fn build(server: &MockServer) -> MPCKit {
+    MPCKit::builder()
         .base_url(server.uri())
         .api_key("mpckit_test_x")
         .network(Network::Testnet)
@@ -105,7 +105,7 @@ async fn http_402_maps_to_insufficient_credits() {
     let api = build(&server).await;
     let err = api.balance().await.expect_err("must fail");
     match err {
-        MpcKitError::InsufficientCredits { ref message, .. } => {
+        MPCKitError::InsufficientCredits { ref message, .. } => {
             assert!(message.contains("insufficient credits"));
         }
         other => panic!("expected InsufficientCredits, got {other:?}"),
@@ -172,7 +172,7 @@ async fn http_500_preserves_code_and_body() {
     let api = build(&server).await;
     let err = api.list_dwallets().await.expect_err("must fail");
     match err {
-        MpcKitError::Http {
+        MPCKitError::Http {
             status,
             ref code,
             ref message,
@@ -234,21 +234,21 @@ async fn protocol_parameters_caches_decoded_bytes() {
 
 #[tokio::test]
 async fn builder_rejects_missing_required_fields() {
-    let no_key = MpcKit::builder()
+    let no_key = MPCKit::builder()
         .base_url("http://localhost:0")
         .network(Network::Testnet)
         .build();
-    assert!(matches!(no_key, Err(MpcKitError::Invalid(_))));
+    assert!(matches!(no_key, Err(MPCKitError::Invalid(_))));
 
-    let no_network = MpcKit::builder()
+    let no_network = MPCKit::builder()
         .api_key("k")
         .base_url("http://localhost:0")
         .build();
-    assert!(matches!(no_network, Err(MpcKitError::Invalid(_))));
+    assert!(matches!(no_network, Err(MPCKitError::Invalid(_))));
 
     // base_url is optional: omitting it falls back to the hosted endpoint
     // for the chosen network.
-    let defaulted = MpcKit::builder()
+    let defaulted = MPCKit::builder()
         .api_key("k")
         .network(Network::Testnet)
         .build()
@@ -258,7 +258,7 @@ async fn builder_rejects_missing_required_fields() {
         "https://api.testnet.mpckit.xyz/",
     );
 
-    let mainnet = MpcKit::builder()
+    let mainnet = MPCKit::builder()
         .api_key("k")
         .network(Network::Mainnet)
         .build()

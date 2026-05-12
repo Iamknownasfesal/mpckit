@@ -1,7 +1,7 @@
 /**
  * `@mpckit/react` — React bindings over `@mpckit/sdk`.
  *
- * Wraps the imperative `MpcKit` class in a Provider + TanStack Query
+ * Wraps the imperative `MPCKit` class in a Provider + TanStack Query
  * hooks so React apps get caching, dedup, and refetch for free. The
  * Provider also handles the boilerplate of constructing a Web Worker
  * crypto engine when `useWorker` is on, keeping the WASM-heavy DKG /
@@ -21,7 +21,7 @@ export type {
   DWallet,
   EncryptionKey,
   KeySession,
-  MpcKitOptions,
+  MPCKitOptions,
   Network,
   NetworkInfo,
   OnboardArgs,
@@ -35,9 +35,9 @@ export {
   defaultBaseUrl,
   Hash,
   MPCKIT_HOSTS,
-  MpcKitError,
-  MpcKitInsufficientCreditsError,
-  MpcKitTimeoutError,
+  MPCKitError,
+  MPCKitInsufficientCreditsError,
+  MPCKitTimeoutError,
   SignatureAlgorithm,
 } from "@mpckit/sdk";
 export type { EdenClient, EdenData } from "@mpckit/sdk/eden";
@@ -51,6 +51,6 @@ export { useNetworkInfo } from "./hooks/use-network-info";
 export { useOnboard } from "./hooks/use-onboard";
 export { usePricing } from "./hooks/use-pricing";
 export { useSign } from "./hooks/use-sign";
-export type { MpcKitProviderProps } from "./provider";
-export { MpcKitProvider, useEdenClient, useMpcKit } from "./provider";
+export type { MPCKitProviderProps } from "./provider";
+export { MPCKitProvider, useEdenClient, useMPCKit } from "./provider";
 export { mpcKitQueryKeys } from "./query-keys";

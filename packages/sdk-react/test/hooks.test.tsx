@@ -1,10 +1,10 @@
 /**
  * React hook tests. Covers:
  *
- *   - `useMpcKit` throws when no Provider is mounted.
- *   - `useBalance` reads through to `MpcKit.balance()` and surfaces
+ *   - `useMPCKit` throws when no Provider is mounted.
+ *   - `useBalance` reads through to `MPCKit.balance()` and surfaces
  *     `{data, isLoading}` in the documented shape.
- *   - `useDeclareDeposit` mutation triggers `MpcKit.declareDeposit()`
+ *   - `useDeclareDeposit` mutation triggers `MPCKit.declareDeposit()`
  *     and invalidates balance + history (the most observable cache
  *     invalidation, exercising the same wiring used by `useOnboard`
  *     and `useSign`).
@@ -18,7 +18,7 @@ import { act, render, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { useBalance } from "../src/hooks/use-balance";
 import { useDeclareDeposit } from "../src/hooks/use-declare-deposit";
-import { useMpcKit } from "../src/provider";
+import { useMPCKit } from "../src/provider";
 import { mpcKitQueryKeys } from "../src/query-keys";
 import { fakeFetch, makeQueryClient, Providers } from "./util";
 
@@ -33,10 +33,10 @@ function wrapper(
   );
 }
 
-describe("useMpcKit", () => {
+describe("useMPCKit", () => {
   test("throws when called outside Provider", () => {
-    expect(() => renderHook(() => useMpcKit())).toThrow(
-      /must be used inside <MpcKitProvider>/,
+    expect(() => renderHook(() => useMPCKit())).toThrow(
+      /must be used inside <MPCKitProvider>/,
     );
   });
 });

@@ -1,8 +1,8 @@
-# MpcKit
+# MPCKit
 
 **Hosted MPC signing for Sui dWallets. Sign on every chain from one API.**
 
-MpcKit is a gateway that runs Ika dWallets on behalf of users who don't
+MPCKit is a gateway that runs Ika dWallets on behalf of users who don't
 want to hold a Sui account. The operator pays IKA + SUI fees and runs
 the presign pool; users keep their encryption identity client-side and
 pay the operator a service fee. The dWallet itself is zero-trust: the
@@ -33,9 +33,9 @@ network's env block to disable it cleanly.
 ## SDK quickstart
 
 ```ts
-import { MpcKit } from "@mpckit/sdk";
+import { MPCKit } from "@mpckit/sdk";
 
-const client = new MpcKit({
+const client = new MPCKit({
   baseUrl: "https://api.mpckit.xyz",
   apiKey: process.env.MPCKIT_API_KEY!, // mpckit_test_... or mpckit_live_...
 });

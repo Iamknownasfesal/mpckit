@@ -1,6 +1,6 @@
 # @mpckit/react
 
-React + TanStack Query bindings for [MpcKit](https://mpckit.xyz). Wraps
+React + TanStack Query bindings for [MPCKit](https://mpckit.xyz). Wraps
 [`@mpckit/sdk`](https://www.npmjs.com/package/@mpckit/sdk) in a
 Provider and a set of hooks so caching, dedup, and refetch are handled
 for you, and the WASM-heavy DKG / sign ceremonies run in a Web Worker
@@ -20,7 +20,7 @@ consumer owns the `QueryClient`.
 ## Setup
 
 ```tsx
-import { MpcKitProvider } from "@mpckit/react";
+import { MPCKitProvider } from "@mpckit/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const qc = new QueryClient();
@@ -28,7 +28,7 @@ const qc = new QueryClient();
 export function Root({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={qc}>
-      <MpcKitProvider
+      <MPCKitProvider
         options={{
           apiKey: import.meta.env.VITE_MPCKIT_API_KEY,
           network: "testnet",
@@ -42,7 +42,7 @@ export function Root({ children }: { children: React.ReactNode }) {
         }
       >
         {children}
-      </MpcKitProvider>
+      </MPCKitProvider>
     </QueryClientProvider>
   );
 }
@@ -116,7 +116,7 @@ queries automatically (e.g. `useOnboard` invalidates `useDWallets` +
 
 ## Escape hatches
 
-- `useMpcKit()`: the raw `MpcKit` instance, if you need to call
+- `useMPCKit()`: the raw `MPCKit` instance, if you need to call
   something the hooks don't cover.
 - `useEdenClient()`: the typed Eden treaty client for direct backend
   calls with full type inference from the backend's `App` type.

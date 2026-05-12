@@ -52,10 +52,10 @@ export function buildApp() {
           path: "/docs",
           documentation: {
             info: {
-              title: "MpcKit API",
+              title: "MPCKit API",
               version: "0.0.0",
               description:
-                "Hosted MpcKit dWallet gateway. SDKs talk to this surface; consult the Self-host guide for running your own tenant.",
+                "Hosted MPCKit dWallet gateway. SDKs talk to this surface; consult the Self-host guide for running your own tenant.",
               license: {
                 name: "BSD-3-Clause",
                 url: "https://opensource.org/license/bsd-3-clause",

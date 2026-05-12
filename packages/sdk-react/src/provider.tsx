@@ -1,5 +1,5 @@
 /**
- * `MpcKitProvider` constructs a single `MpcKit` instance for the React
+ * `MPCKitProvider` constructs a single `MPCKit` instance for the React
  * tree, optionally wiring up a Web Worker crypto engine so DKG and
  * sign ceremonies run off the main thread. The instance is exposed via
  * context so hooks can call into it without prop drilling.
@@ -16,8 +16,8 @@ import {
   type CryptoEngine,
   createWebWorkerCryptoEngine,
   defaultBaseUrl,
-  MpcKit,
-  type MpcKitOptions,
+  MPCKit,
+  type MPCKitOptions,
 } from "@mpckit/sdk";
 import { createEdenClient, type EdenClient } from "@mpckit/sdk/eden";
 import {
@@ -29,8 +29,8 @@ import {
   useRef,
 } from "react";
 
-export interface MpcKitProviderProps {
-  options: Omit<MpcKitOptions, "crypto">;
+export interface MPCKitProviderProps {
+  options: Omit<MPCKitOptions, "crypto">;
   /**
    * Drive crypto from a Web Worker constructed via `workerFactory`.
    * Required for browser apps that can't afford to block the main
@@ -52,20 +52,20 @@ export interface MpcKitProviderProps {
 }
 
 interface ApiBundle {
-  api: MpcKit;
+  api: MPCKit;
   eden: EdenClient;
   worker: Worker | null;
 }
 
-const MpcKitContext = createContext<ApiBundle | null>(null);
+const MPCKitContext = createContext<ApiBundle | null>(null);
 
-export function MpcKitProvider({
+export function MPCKitProvider({
   options,
   useWorker,
   workerFactory,
   crypto,
   children,
-}: MpcKitProviderProps) {
+}: MPCKitProviderProps) {
   const bundleRef = useRef<ApiBundle | null>(null);
 
   const bundle = useMemo<ApiBundle>(() => {
@@ -75,15 +75,15 @@ export function MpcKitProvider({
     if (!engine && useWorker) {
       if (!workerFactory) {
         throw new Error(
-          "MpcKitProvider: useWorker requires workerFactory; pass `() => new Worker(new URL('@mpckit/sdk/worker-impl', import.meta.url), { type: 'module' })`",
+          "MPCKitProvider: useWorker requires workerFactory; pass `() => new Worker(new URL('@mpckit/sdk/worker-impl', import.meta.url), { type: 'module' })`",
         );
       }
       worker = workerFactory();
       engine = createWebWorkerCryptoEngine(worker);
     }
-    const api = new MpcKit(engine ? { ...options, crypto: engine } : options);
+    const api = new MPCKit(engine ? { ...options, crypto: engine } : options);
     // Eden treaty mirrors the same baseUrl + apiKey: it's a typed
-    // alternative to the MpcKit class for raw HTTP calls. Hooks that
+    // alternative to the MPCKit class for raw HTTP calls. Hooks that
     // don't need ceremony orchestration prefer this so refactors on
     // the backend become compile-time errors here.
     const eden = createEdenClient({
@@ -104,25 +104,25 @@ export function MpcKitProvider({
   }, []);
 
   return (
-    <MpcKitContext.Provider value={bundle}>{children}</MpcKitContext.Provider>
+    <MPCKitContext.Provider value={bundle}>{children}</MPCKitContext.Provider>
   );
 }
 
 function useBundle(): ApiBundle {
-  const bundle = useContext(MpcKitContext);
+  const bundle = useContext(MPCKitContext);
   if (!bundle) {
-    throw new Error("useMpcKit must be used inside <MpcKitProvider>");
+    throw new Error("useMPCKit must be used inside <MPCKitProvider>");
   }
   return bundle;
 }
 
-export function useMpcKit(): MpcKit {
+export function useMPCKit(): MPCKit {
   return useBundle().api;
 }
 
 /**
  * Type-safe Eden treaty client. Use this for routes that don't need
- * the MpcKit orchestration helpers — every method is inferred from the
+ * the MPCKit orchestration helpers — every method is inferred from the
  * backend's exact App type.
  *
  * Example:

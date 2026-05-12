@@ -1,19 +1,19 @@
-import type { MpcKitError, SignArgs, SignResult } from "@mpckit/sdk";
+import type { MPCKitError, SignArgs, SignResult } from "@mpckit/sdk";
 import {
   type UseMutationOptions,
   type UseMutationResult,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useMpcKit } from "../provider";
+import { useMPCKit } from "../provider";
 import { mpcKitQueryKeys } from "../query-keys";
 
-type Options = UseMutationOptions<SignResult, MpcKitError, SignArgs>;
+type Options = UseMutationOptions<SignResult, MPCKitError, SignArgs>;
 
 export function useSign(
   opts?: Options,
-): UseMutationResult<SignResult, MpcKitError, SignArgs> {
-  const api = useMpcKit();
+): UseMutationResult<SignResult, MPCKitError, SignArgs> {
+  const api = useMPCKit();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: SignArgs) => api.sign(args),

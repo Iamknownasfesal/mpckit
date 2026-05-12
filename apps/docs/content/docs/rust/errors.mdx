@@ -1,34 +1,34 @@
 ---
 title: Errors
-description: MpcKitError variants and how to match them.
+description: MPCKitError variants and how to match them.
 ---
 
 The Rust crate mirrors the TypeScript SDK's error surface.
 
 ```rust
-use mpckit::MpcKitError;
+use mpckit::MPCKitError;
 
 match api.sign_submit(args).await {
     Ok(res) => { /* … */ }
-    Err(MpcKitError::InsufficientCredits { body }) => {
+    Err(MPCKitError::InsufficientCredits { body }) => {
         // status 402, code "INSUFFICIENT_CREDITS". Top up.
     }
-    Err(MpcKitError::Timeout { message }) => {
+    Err(MPCKitError::Timeout { message }) => {
         // polling exceeded the configured timeout. The request may
         // still finish on the backend; reuse your idempotency key
         // and call sign_submit again, or poll get_sign_request by
         // a sign_request_id from a prior response.
     }
-    Err(MpcKitError::Http { status, code, message, body }) => {
+    Err(MPCKitError::Http { status, code, message, body }) => {
         // any other typed API error
     }
-    Err(MpcKitError::Transport(e)) => {
+    Err(MPCKitError::Transport(e)) => {
         // network failure before the backend processed the request
     }
 }
 ```
 
-`Result<T> = std::result::Result<T, MpcKitError>` is re-exported from
+`Result<T> = std::result::Result<T, MPCKitError>` is re-exported from
 the crate root, so you can write `Result<Foo>` in your own code.
 
 ## Variants
@@ -52,7 +52,7 @@ let key = mpckit::new_idempotency_key();
 
 let sig = match api.sign_submit(args.clone().with_idempotency(&key)).await {
     Ok(s) => s,
-    Err(MpcKitError::Timeout { .. }) => {
+    Err(MPCKitError::Timeout { .. }) => {
         // safe to retry with the same key
         api.sign_submit(args.with_idempotency(&key)).await?
     }
@@ -62,7 +62,7 @@ let sig = match api.sign_submit(args.clone().with_idempotency(&key)).await {
 
 ## Surfacing in `anyhow` chains
 
-`MpcKitError` implements `std::error::Error`, so it composes with
+`MPCKitError` implements `std::error::Error`, so it composes with
 `anyhow::Error` and `?` out of any handler. The structured fields
 (`code`, `status`, etc.) survive into the `anyhow` chain via the
 `Display` impl.
