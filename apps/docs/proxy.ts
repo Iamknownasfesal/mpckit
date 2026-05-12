@@ -17,7 +17,7 @@ const SPECIAL_PATHS = new Set([
   "/manifest.webmanifest",
 ]);
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const host = (req.headers.get("host") ?? "").toLowerCase();
   const url = req.nextUrl.clone();
   const pathname = url.pathname;
