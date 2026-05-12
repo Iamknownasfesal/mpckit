@@ -183,5 +183,5 @@ jobs:
           set -euo pipefail
           ns="mpckit-testnet"
           for d in backend dashboard docs gas-station-testnet gas-station-mainnet; do
-            kubectl -n "$ns" rollout status deployment/"$d" --timeout=5m
+            kubectl -n "$ns" rollout status deployment/"$d" --timeout=10m
           done
