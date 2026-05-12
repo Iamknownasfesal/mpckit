@@ -54,12 +54,20 @@ jobs:
           - name: mpckit-backend
             dockerfile: apps/backend/Dockerfile
             context: .
+            build-args: ""
           - name: mpckit-dashboard
             dockerfile: apps/dashboard/Dockerfile
             context: .
+            # NEXT_PUBLIC_* values are inlined at build time, including
+            # the rewrite in next.config.mjs that proxies /api/auth/*
+            # to the backend. Without this arg the rewrite is missing
+            # and the dashboard 404s on every auth call.
+            build-args: |
+              NEXT_PUBLIC_BACKEND_URL=https://api.mpckit.xyz
           - name: mpckit-docs
             dockerfile: apps/docs/Dockerfile
             context: .
+            build-args: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -97,6 +105,7 @@ jobs:
           file: ${{ matrix.image.dockerfile }}
           push: true
           tags: ${{ steps.tags.outputs.tags }}
+          build-args: ${{ matrix.image.build-args }}
           cache-from: type=gha,scope=${{ matrix.image.name }}
           cache-to: type=gha,scope=${{ matrix.image.name }},mode=max
           provenance: false
