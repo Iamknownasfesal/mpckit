@@ -1,10 +1,10 @@
 "use client";
 
+import { Check, ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SCOPES, type Scope } from "@/lib/scopes";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, ChevronUp, Search, X } from "lucide-react";
-import { useMemo, useState } from "react";
 
 export function ScopePicker({
   value,

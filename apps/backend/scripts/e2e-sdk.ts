@@ -33,7 +33,7 @@
  */
 import { Curve, Hash, MpcKit, SignatureAlgorithm } from "@mpckit/sdk";
 import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
-import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from "@mysten/sui/jsonRpc";
+import { getJsonRpcFullnodeUrl, SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
 

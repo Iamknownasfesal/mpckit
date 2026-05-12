@@ -1,16 +1,3 @@
-import type { IkaNetwork } from "@/config/env";
-import {
-  OP_PRICES,
-  charge as chargeCredits,
-  refund as refundCredits,
-} from "@/features/billing/service";
-import { getDb } from "@/shared/db/client";
-import { type EncryptionKey, encryptionKeys } from "@/shared/db/schema";
-import { errors } from "@/shared/errors";
-import { getIkaClient } from "@/shared/ika/client";
-import { findFirstCreatedByType } from "@/shared/sui/effects";
-import { buildRegisterEncryptionKey } from "@/shared/sui/move-calls";
-import { getTxExecutor } from "@/shared/sui/tx-executor";
 /**
  * Encryption-key registration. The user generates a class-groups
  * keypair from their passkey PRF off-chain, signs the public key with
@@ -31,6 +18,19 @@ import { getTxExecutor } from "@/shared/sui/tx-executor";
 import { Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
 import { and, eq } from "drizzle-orm";
+import type { IkaNetwork } from "@/config/env";
+import {
+  charge as chargeCredits,
+  OP_PRICES,
+  refund as refundCredits,
+} from "@/features/billing/service";
+import { getDb } from "@/shared/db/client";
+import { type EncryptionKey, encryptionKeys } from "@/shared/db/schema";
+import { errors } from "@/shared/errors";
+import { getIkaClient } from "@/shared/ika/client";
+import { findFirstCreatedByType } from "@/shared/sui/effects";
+import { buildRegisterEncryptionKey } from "@/shared/sui/move-calls";
+import { getTxExecutor } from "@/shared/sui/tx-executor";
 
 export interface RegisterEncryptionKeyArgs {
   userId: string;

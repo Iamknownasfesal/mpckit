@@ -36,10 +36,11 @@
  * sign that costs ~$0.01; the safety multiplier in pricing/service.ts
  * absorbs the bias.
  */
+
+import { normalizeStructTag } from "@mysten/sui/utils";
 import { env } from "@/config/env";
 import { log } from "@/config/log";
 import { priceFeedAgeSeconds, priceFeedStale } from "@/shared/cache/metrics";
-import { normalizeStructTag } from "@mysten/sui/utils";
 
 const COINGECKO_BASE = "https://api.coingecko.com/api/v3/simple/price";
 

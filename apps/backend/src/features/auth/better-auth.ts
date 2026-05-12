@@ -1,13 +1,3 @@
-import { env } from "@/config/env";
-import { log } from "@/config/log";
-import { getDb, isDbConfigured } from "@/shared/db/client";
-import {
-  authAccounts,
-  authPasskeys,
-  authSessions,
-  authVerifications,
-  users,
-} from "@/shared/db/schema";
 import { passkey } from "@better-auth/passkey";
 /**
  * Better-Auth instance for the dashboard surface.
@@ -29,6 +19,16 @@ import { passkey } from "@better-auth/passkey";
  */
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { env } from "@/config/env";
+import { log } from "@/config/log";
+import { getDb, isDbConfigured } from "@/shared/db/client";
+import {
+  authAccounts,
+  authPasskeys,
+  authSessions,
+  authVerifications,
+  users,
+} from "@/shared/db/schema";
 import { suiSiwsPlugin } from "./siws-plugin";
 
 export type AuthInstance = ReturnType<typeof betterAuth>;

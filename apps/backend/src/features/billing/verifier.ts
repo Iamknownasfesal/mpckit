@@ -1,10 +1,3 @@
-import { type IkaNetwork, env } from "@/config/env";
-import {
-  assertPricesFresh,
-  microUsdFromAtomic,
-} from "@/features/pricing/price-feed";
-import { errors } from "@/shared/errors";
-import { getSuiClient } from "@/shared/sui/client";
 /**
  * On-chain deposit verifier. Given a Sui tx digest and the user's
  * derived clearinghouse address, returns the net positive movement
@@ -16,6 +9,13 @@ import { getSuiClient } from "@/shared/sui/client";
  * the same transaction that bumps `users.credits_micro` (microUSD).
  */
 import { normalizeStructTag } from "@mysten/sui/utils";
+import { env, type IkaNetwork } from "@/config/env";
+import {
+  assertPricesFresh,
+  microUsdFromAtomic,
+} from "@/features/pricing/price-feed";
+import { errors } from "@/shared/errors";
+import { getSuiClient } from "@/shared/sui/client";
 
 export interface VerifiedDeposit {
   digest: string;

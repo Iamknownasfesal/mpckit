@@ -7,10 +7,10 @@
  */
 import {
   Curve,
+  createWebWorkerCryptoEngine,
   Hash,
   MpcKit,
   SignatureAlgorithm,
-  createWebWorkerCryptoEngine,
 } from "@mpckit/sdk";
 
 const log = (msg: string) => {

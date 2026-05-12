@@ -1,8 +1,3 @@
-import { env } from "@/config/env";
-import { log } from "@/config/log";
-import { audit } from "@/shared/audit";
-import { getDb } from "@/shared/db/client";
-import { apiKeys, users } from "@/shared/db/schema";
 /**
  * Admin bootstrap.
  *
@@ -15,6 +10,11 @@ import { apiKeys, users } from "@/shared/db/schema";
  * change it later via the API.
  */
 import { eq } from "drizzle-orm";
+import { env } from "@/config/env";
+import { log } from "@/config/log";
+import { audit } from "@/shared/audit";
+import { getDb } from "@/shared/db/client";
+import { apiKeys, users } from "@/shared/db/schema";
 import { hashKey, networkFromPlaintext } from "./keys";
 
 const ADMIN_EMAIL = "admin@mpckit.local";

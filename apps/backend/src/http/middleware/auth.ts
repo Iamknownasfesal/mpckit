@@ -1,11 +1,3 @@
-import { defaultNetwork } from "@/config/env";
-import { getAuth } from "@/features/auth/better-auth";
-import { hashKey, parseBearer } from "@/features/auth/keys";
-import { loggerFor } from "@/http/middleware/request-logger";
-import { auditFireAndForget } from "@/shared/audit";
-import { getDb, isDbConfigured } from "@/shared/db/client";
-import { type ApiKey, type User, apiKeys, users } from "@/shared/db/schema";
-import { hasNetwork } from "@/shared/networks/registry";
 /**
  * Bearer + session auth middleware.
  *
@@ -25,6 +17,14 @@ import { hasNetwork } from "@/shared/networks/registry";
  */
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
+import { defaultNetwork } from "@/config/env";
+import { getAuth } from "@/features/auth/better-auth";
+import { hashKey, parseBearer } from "@/features/auth/keys";
+import { loggerFor } from "@/http/middleware/request-logger";
+import { auditFireAndForget } from "@/shared/audit";
+import { getDb, isDbConfigured } from "@/shared/db/client";
+import { type ApiKey, apiKeys, type User, users } from "@/shared/db/schema";
+import { hasNetwork } from "@/shared/networks/registry";
 
 export type AuthKind = "api_key" | "session";
 

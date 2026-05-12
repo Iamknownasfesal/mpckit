@@ -5,12 +5,12 @@
  * primitives but listens on `self.onmessage`.
  */
 import {
+  createUserSignMessageWithPublicOutput,
   Curve as IkaCurve,
   Hash as IkaHash,
   SignatureAlgorithm as IkaSignatureAlgorithm,
-  UserShareEncryptionKeys,
-  createUserSignMessageWithPublicOutput,
   prepareDKGAsync,
+  UserShareEncryptionKeys,
 } from "@ika.xyz/sdk";
 import { Curve, Hash, SignatureAlgorithm } from "../constants";
 import { fromHex, toHex } from "../util";

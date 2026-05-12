@@ -1,8 +1,3 @@
-import type { IkaNetwork } from "@/config/env";
-import { immutableCache } from "@/shared/cache/l0";
-import { wasmCalls } from "@/shared/cache/metrics";
-import { getIkaClient } from "@/shared/ika/client";
-import { listNetworks } from "@/shared/networks/registry";
 /**
  * Protocol public parameters service.
  *
@@ -23,6 +18,11 @@ import { listNetworks } from "@/shared/networks/registry";
  * replicate `readTableVecAsRawBytes` ourselves and hash the bytes.
  */
 import { Curve } from "@ika.xyz/sdk";
+import type { IkaNetwork } from "@/config/env";
+import { immutableCache } from "@/shared/cache/l0";
+import { wasmCalls } from "@/shared/cache/metrics";
+import { getIkaClient } from "@/shared/ika/client";
+import { listNetworks } from "@/shared/networks/registry";
 
 const FAMILY = "protocol_params";
 

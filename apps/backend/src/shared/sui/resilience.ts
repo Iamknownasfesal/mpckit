@@ -1,5 +1,3 @@
-import { log } from "@/config/log";
-import { suiRpcLatency } from "@/shared/cache/metrics";
 /**
  * Resilience layer for Sui gRPC calls.
  *
@@ -17,6 +15,8 @@ import { suiRpcLatency } from "@/shared/cache/metrics";
  */
 import CircuitBreaker from "opossum";
 import pRetry, { type RetryContext } from "p-retry";
+import { log } from "@/config/log";
+import { suiRpcLatency } from "@/shared/cache/metrics";
 
 const breakers = new Map<
   string,

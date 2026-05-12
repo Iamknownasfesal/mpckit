@@ -11,14 +11,15 @@
  * the same address on both chains). Submission, gas station, and SDK
  * config are per-network.
  */
+
+import { getNetworkConfig, IkaClient } from "@ika.xyz/sdk";
+import { SuiGrpcClient } from "@mysten/sui/grpc";
 import {
+  enabledNetworks,
   type IkaNetwork,
   type NetworkEnv,
-  enabledNetworks,
   networkEnv,
 } from "@/config/env";
-import { IkaClient, getNetworkConfig } from "@ika.xyz/sdk";
-import { SuiGrpcClient } from "@mysten/sui/grpc";
 
 export type { IkaNetwork } from "@/config/env";
 

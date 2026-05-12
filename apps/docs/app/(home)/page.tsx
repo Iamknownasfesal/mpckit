@@ -1,6 +1,6 @@
+import Link from "next/link";
 import { Mark } from "@/components/mark";
 import { DASHBOARD_URL } from "@/lib/site";
-import Link from "next/link";
 import { DitherBg, GrainBg, HalftoneBg } from "./_components/shaders";
 
 export default function HomePage() {

@@ -1,13 +1,5 @@
 "use client";
 
-import { GrainBg } from "@/components/dash/shaders";
-import { StatusPill } from "@/components/dash/status-pill";
-import { WalletPickerDialog } from "@/components/dash/wallet-picker";
-import { Mark } from "@/components/mark";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { authClient, signIn, useSession } from "@/lib/auth-client";
 import {
   useCurrentAccount,
   useDisconnectWallet,
@@ -18,6 +10,14 @@ import { AlertTriangle, Fingerprint, Github, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { GrainBg } from "@/components/dash/shaders";
+import { StatusPill } from "@/components/dash/status-pill";
+import { WalletPickerDialog } from "@/components/dash/wallet-picker";
+import { Mark } from "@/components/mark";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { authClient, signIn, useSession } from "@/lib/auth-client";
 
 const POST_SIGNIN = "/overview";
 

@@ -1,6 +1,6 @@
+import { Elysia, t } from "elysia";
 import { getProtocolParameters } from "@/features/protocol-parameters/service";
 import { requestNetwork } from "@/http/middleware/auth";
-import { Elysia, t } from "elysia";
 
 /**
  * Protocol public parameters for a curve. Cached by content hash of

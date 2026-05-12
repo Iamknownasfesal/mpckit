@@ -1,7 +1,8 @@
-import { type IkaNetwork, env } from "@/config/env";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { env, type IkaNetwork } from "@/config/env";
 import {
-  type VerifiedDeposit,
   creditsFor,
+  type VerifiedDeposit,
   verifyDeposit,
 } from "@/features/billing/verifier";
 import { deriveDepositAddress } from "@/shared/billing/derive";
@@ -16,7 +17,6 @@ import {
 import { errors } from "@/shared/errors";
 import { enqueue } from "@/shared/queue/client";
 import { JOBS } from "@/shared/queue/types";
-import { and, desc, eq, sql } from "drizzle-orm";
 
 async function getOrCreateAccount(userId: string, network: string) {
   const db = getDb();

@@ -12,7 +12,7 @@
  * end-to-end. Low-level HTTP wrappers (`raw.*`) give consumers the
  * escape hatch when they want to compose differently.
  */
-import { IkaClient, getNetworkConfig } from "@ika.xyz/sdk";
+import { getNetworkConfig, IkaClient } from "@ika.xyz/sdk";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import type { Curve, Hash, Network, SignatureAlgorithm } from "./constants";
 import { Curve as CurveEnum } from "./constants";

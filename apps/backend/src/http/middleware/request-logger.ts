@@ -1,5 +1,3 @@
-import { type Logger, log } from "@/config/log";
-import { httpLatency } from "@/shared/cache/metrics";
 /**
  * Request lifecycle logger.
  *
@@ -15,6 +13,8 @@ import { httpLatency } from "@/shared/cache/metrics";
  *   Prometheus histogram, labeled by route + status.
  */
 import { Elysia } from "elysia";
+import { type Logger, log } from "@/config/log";
+import { httpLatency } from "@/shared/cache/metrics";
 
 const REQUEST_ID_HEADER = "x-request-id";
 

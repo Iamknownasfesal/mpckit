@@ -1,4 +1,3 @@
-import { env } from "@/config/env";
 /**
  * Programmable-tx-block builders for the deployed `mpckitcore` Move
  * package.
@@ -15,6 +14,7 @@ import { env } from "@/config/env";
  * publish.
  */
 import type { Transaction } from "@mysten/sui/transactions";
+import { env } from "@/config/env";
 
 export type Network = "testnet" | "mainnet";
 

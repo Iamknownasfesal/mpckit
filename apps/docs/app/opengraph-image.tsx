@@ -1,5 +1,5 @@
-import { SITE_NAME } from "@/lib/site";
 import { ImageResponse } from "next/og";
+import { SITE_NAME } from "@/lib/site";
 
 export const runtime = "nodejs";
 export const alt = `${SITE_NAME}: sign on every chain from one API.`;

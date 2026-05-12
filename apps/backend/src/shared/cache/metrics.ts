@@ -4,10 +4,10 @@
  */
 import {
   Counter,
+  collectDefaultMetrics,
   Gauge,
   Histogram,
   Registry,
-  collectDefaultMetrics,
 } from "prom-client";
 
 export const registry = new Registry();

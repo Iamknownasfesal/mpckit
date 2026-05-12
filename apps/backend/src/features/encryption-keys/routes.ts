@@ -1,13 +1,13 @@
-import {
-  listEncryptionKeys,
-  registerEncryptionKey,
-} from "@/features/encryption-keys/service";
-import { requestNetwork, requireAuth } from "@/http/middleware/auth";
 /**
  *   POST /v1/encryption-keys   register a class-groups encryption key
  *   GET  /v1/encryption-keys   list this user's registered keys
  */
 import { Elysia, t } from "elysia";
+import {
+  listEncryptionKeys,
+  registerEncryptionKey,
+} from "@/features/encryption-keys/service";
+import { requestNetwork, requireAuth } from "@/http/middleware/auth";
 
 const HEX = /^[0-9a-fA-F]+$/;
 

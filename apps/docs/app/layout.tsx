@@ -1,4 +1,8 @@
 import "./global.css";
+import { RootProvider } from "fumadocs-ui/provider";
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import type { ReactNode } from "react";
 import {
   AUTHOR_NAME,
   AUTHOR_URL,
@@ -8,10 +12,6 @@ import {
   SITE_URL,
   TWITTER_HANDLE,
 } from "@/lib/site";
-import { RootProvider } from "fumadocs-ui/provider";
-import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import type { ReactNode } from "react";
 
 const sans = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });

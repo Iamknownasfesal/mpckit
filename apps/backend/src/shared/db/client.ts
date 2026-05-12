@@ -1,5 +1,3 @@
-import { env } from "@/config/env";
-import { log } from "@/config/log";
 /**
  * Postgres connection + drizzle binding.
  *
@@ -14,6 +12,8 @@ import { log } from "@/config/log";
  */
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { env } from "@/config/env";
+import { log } from "@/config/log";
 import * as schema from "./schema";
 
 let _client: postgres.Sql | undefined;

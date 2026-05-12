@@ -1,4 +1,3 @@
-import { log } from "@/config/log";
 /**
  * Run drizzle migrations from the compiled SQL in
  * `src/shared/db/migrations`.
@@ -7,6 +6,7 @@ import { log } from "@/config/log";
  * DATABASE_URL is set) and from CLI (`bun run db:migrate`).
  */
 import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { log } from "@/config/log";
 import { closeDb, getDb } from "./client";
 
 export async function runMigrations(): Promise<void> {

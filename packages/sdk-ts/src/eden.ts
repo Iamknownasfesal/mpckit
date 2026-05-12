@@ -57,9 +57,8 @@ export type EdenClient = ReturnType<typeof createEdenClient>;
  * Example:
  *   type Balance = EdenData<ReturnType<EdenClient["v1"]["billing"]["balance"]["get"]>>;
  */
-export type EdenData<T> = Awaited<T> extends { data: infer D }
-  ? NonNullable<D>
-  : never;
+export type EdenData<T> =
+  Awaited<T> extends { data: infer D } ? NonNullable<D> : never;
 
 export function createEdenClient(opts: EdenClientOptions) {
   const headers: Record<string, string> = {};

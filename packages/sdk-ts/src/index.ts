@@ -14,7 +14,7 @@
  * the calling thread; for browser apps, swap in a `WebWorkerCryptoEngine`
  * (sibling export, ships separately) to keep the main thread responsive.
  */
-export { MpcKit, MPCKIT_HOSTS, defaultBaseUrl } from "./api";
+
 export type {
   MpcKitOptions,
   OnboardArgs,
@@ -22,16 +22,21 @@ export type {
   SignArgs,
   SignResult,
 } from "./api";
+export { defaultBaseUrl, MPCKIT_HOSTS, MpcKit } from "./api";
+export type { Network } from "./constants";
 
+export { Curve, Hash, SignatureAlgorithm } from "./constants";
+export type { CryptoEngine, DKGOutput, KeySession } from "./crypto/engine";
+export { InlineCryptoEngine, inlineCryptoEngine } from "./crypto/inline";
+export {
+  createWebWorkerCryptoEngine,
+  WebWorkerCryptoEngine,
+} from "./crypto/web-worker";
 export {
   MpcKitError,
   MpcKitInsufficientCreditsError,
   MpcKitTimeoutError,
 } from "./errors";
-
-export { Curve, Hash, SignatureAlgorithm } from "./constants";
-export type { Network } from "./constants";
-
 export type {
   ApiKey,
   BillingCharge,
@@ -43,17 +48,9 @@ export type {
   SignRequest,
   User,
 } from "./types";
-
 export {
   fromHex,
   newIdempotencyKey,
   randomSessionIdentifier,
   toHex,
 } from "./util";
-
-export type { CryptoEngine, KeySession, DKGOutput } from "./crypto/engine";
-export { InlineCryptoEngine, inlineCryptoEngine } from "./crypto/inline";
-export {
-  WebWorkerCryptoEngine,
-  createWebWorkerCryptoEngine,
-} from "./crypto/web-worker";

@@ -11,15 +11,16 @@
  * docker-compose.yml.
  */
 import { describe, expect, test } from "bun:test";
+import { Elysia } from "elysia";
 import {
   generateApiKey,
-  hashKey,
   hashesEqual,
+  hashKey,
   parseBearer,
 } from "@/features/auth/keys";
 import {
-  AuthError,
   _setPrincipalForTest,
+  AuthError,
   authMiddleware,
   principalFor,
   requireAdmin,
@@ -28,7 +29,6 @@ import {
 } from "@/http/middleware/auth";
 import { rateLimitMiddleware } from "@/http/middleware/rate-limit";
 import type { ApiKey, User } from "@/shared/db/schema";
-import { Elysia } from "elysia";
 
 function fakeUser(overrides: Partial<User> = {}): User {
   return {

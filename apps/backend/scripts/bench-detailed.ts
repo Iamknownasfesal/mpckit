@@ -19,14 +19,14 @@
  *   BENCH_CURVE (default SECP256K1), BENCH_SIGN_ITERS (default 5).
  */
 import { createHash, randomBytes } from "node:crypto";
-import { IkaClient, getNetworkConfig } from "@ika.xyz/sdk";
+import { getNetworkConfig, IkaClient } from "@ika.xyz/sdk";
 import {
   Curve,
   Hash,
+  inlineCryptoEngine,
   MpcKit,
   MpcKitError,
   SignatureAlgorithm,
-  inlineCryptoEngine,
 } from "@mpckit/sdk";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 

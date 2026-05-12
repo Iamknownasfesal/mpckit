@@ -1,11 +1,3 @@
-import {
-  getSignRequest,
-  prepareSignRequest,
-  submitPreparedSign,
-} from "@/features/sign/service";
-import { requestNetwork, requireAuth } from "@/http/middleware/auth";
-import type { SignRequest } from "@/shared/db/schema";
-import { errors } from "@/shared/errors";
 /**
  *   POST /v1/sign                  phase 1: prepare (returns presign bytes)
  *   POST /v1/sign/:id/submit       phase 2: finalize (sends centralized sig)
@@ -18,6 +10,14 @@ import { errors } from "@/shared/errors";
  * idempotent on the row's existing status.
  */
 import { Elysia, t } from "elysia";
+import {
+  getSignRequest,
+  prepareSignRequest,
+  submitPreparedSign,
+} from "@/features/sign/service";
+import { requestNetwork, requireAuth } from "@/http/middleware/auth";
+import type { SignRequest } from "@/shared/db/schema";
+import { errors } from "@/shared/errors";
 
 const HEX = /^[0-9a-fA-F]+$/;
 const MAX_MESSAGE_HEX = 64 * 1024; // 32 KiB raw message ceiling.

@@ -1,11 +1,11 @@
 "use client";
 
-import { Tile } from "@/components/dash/tile";
-import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
 import { Check, Fingerprint, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Tile } from "@/components/dash/tile";
+import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
 
 const DISMISS_KEY = "mpckit:passkey-banner-dismissed";
 

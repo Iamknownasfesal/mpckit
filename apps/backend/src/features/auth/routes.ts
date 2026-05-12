@@ -1,15 +1,3 @@
-import { generateApiKey } from "@/features/auth/keys";
-import { requireAdmin, requireAuth } from "@/http/middleware/auth";
-import { auditFireAndForget } from "@/shared/audit";
-import { getDb } from "@/shared/db/client";
-import {
-  type ApiKey,
-  type AuditEvent,
-  type User,
-  apiKeys,
-  auditLog,
-  users,
-} from "@/shared/db/schema";
 /**
  * User + api-key management routes.
  *
@@ -22,6 +10,18 @@ import {
  */
 import { and, desc, eq, isNull, notInArray } from "drizzle-orm";
 import { Elysia, t } from "elysia";
+import { generateApiKey } from "@/features/auth/keys";
+import { requireAdmin, requireAuth } from "@/http/middleware/auth";
+import { auditFireAndForget } from "@/shared/audit";
+import { getDb } from "@/shared/db/client";
+import {
+  type ApiKey,
+  type AuditEvent,
+  apiKeys,
+  auditLog,
+  type User,
+  users,
+} from "@/shared/db/schema";
 
 function publicUser(u: User) {
   return {
