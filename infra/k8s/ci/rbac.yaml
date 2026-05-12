@@ -1,0 +1,79 @@
+# CI deploy identity for the GitHub Actions `deploy` workflow.
+#
+# Scope: a single Role in the mpckit-testnet namespace that grants
+# exactly what `kubectl apply -k overlays/testnet` + the subsequent
+# `kubectl rollout status` calls need. NO secrets read, NO exec, NO
+# port-forward, NO cross-namespace, NO cluster-scoped resources.
+#
+# This file lives OUTSIDE infra/k8s/overlays/ on purpose: CI applies
+# the overlay, but should not be able to apply itself. Bootstrap with
+# an admin kubeconfig once:
+#
+#   kubectl apply -f infra/k8s/ci/rbac.yaml
+#
+# Then generate the kubeconfig and update the GitHub secret per the
+# README in this directory.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mpckit-ci
+  namespace: mpckit-testnet
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mpckit-ci-deployer
+  namespace: mpckit-testnet
+rules:
+  # Rollout status reads pod state.
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  # Apply Deployments / StatefulSets, watch rollouts via ReplicaSets.
+  - apiGroups: ["apps"]
+    resources:
+      ["deployments", "deployments/status", "replicasets", "statefulsets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  # Other resources kustomize touches in this overlay.
+  - apiGroups: [""]
+    resources: ["services", "configmaps", "persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  # No verbs on `secrets`, `serviceaccounts`, `rolebindings`, `roles`,
+  # or anything cluster-scoped. If `apply` ever fails with
+  # `forbidden: cannot patch resource "X"`, add the minimum verbs for
+  # that resource here rather than widening to "*".
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mpckit-ci-deployer
+  namespace: mpckit-testnet
+subjects:
+  - kind: ServiceAccount
+    name: mpckit-ci
+    namespace: mpckit-testnet
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: mpckit-ci-deployer
+---
+# Long-lived token for the CI ServiceAccount.
+#
+# Kubernetes 1.24+ no longer auto-mints token Secrets when a SA is
+# created; we ask for one explicitly so the deploy workflow's
+# kubeconfig can carry a stable bearer token. Rotate by deleting this
+# Secret and re-applying the file; that creates a fresh token and
+# invalidates the old one. The new token must then be pulled into the
+# kubeconfig and pushed back to the GitHub secret.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mpckit-ci-token
+  namespace: mpckit-testnet
+  annotations:
+    kubernetes.io/service-account.name: mpckit-ci
+type: kubernetes.io/service-account-token
