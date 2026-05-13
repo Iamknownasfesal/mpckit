@@ -136,6 +136,16 @@ export function requestNetwork(request: Request): IkaNetwork {
         "NETWORK_MISMATCH",
       );
     }
+    // A key provisioned for a network the operator has since disabled
+    // would otherwise sail past the middleware and fail deep in a
+    // downstream service with a confusing error. Reject up front.
+    if (!hasNetwork(keyNet)) {
+      throw new AuthError(
+        403,
+        `network ${keyNet} is not enabled on this backend`,
+        "NETWORK_DISABLED",
+      );
+    }
     return keyNet;
   }
 

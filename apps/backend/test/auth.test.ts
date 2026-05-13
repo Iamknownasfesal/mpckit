@@ -10,25 +10,39 @@
  * routes) need a real Postgres for meaningful coverage; see
  * docker-compose.yml.
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
+
+// Stub the network registry so requestNetwork can be tested without
+// the full env (PACKAGE_ID/caps/treasury/gas-station) the registry
+// otherwise demands. Only `testnet` is "enabled" for this test file.
+// The mock must register before `@/http/middleware/auth` evaluates its
+// imports, so the middleware module is pulled in via `await import`
+// below — biome's import-organize rule won't touch the dynamic form.
+mock.module("@/shared/networks/registry", () => ({
+  hasNetwork: (net: string) => net === "testnet",
+}));
+
 import {
   generateApiKey,
   hashesEqual,
   hashKey,
   parseBearer,
 } from "@/features/auth/keys";
-import {
+import { rateLimitMiddleware } from "@/http/middleware/rate-limit";
+import type { ApiKey, User } from "@/shared/db/schema";
+
+const {
   _setPrincipalForTest,
   AuthError,
   authMiddleware,
   principalFor,
+  requestNetwork,
   requireAdmin,
   requireAuth,
   requireScope,
-} from "@/http/middleware/auth";
-import { rateLimitMiddleware } from "@/http/middleware/rate-limit";
-import type { ApiKey, User } from "@/shared/db/schema";
+} = await import("@/http/middleware/auth");
+type AuthError = InstanceType<typeof AuthError>;
 
 function fakeUser(overrides: Partial<User> = {}): User {
   return {
@@ -222,5 +236,56 @@ describe("authMiddleware no-credential pass-through", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { principal: unknown };
     expect(body.principal).toBeNull();
+  });
+});
+
+describe("requestNetwork", () => {
+  test("api key bound to a disabled network is rejected with NETWORK_DISABLED", () => {
+    // Default test env only enables `testnet`. Provision a key bound
+    // to `mainnet` and confirm requestNetwork refuses it before the
+    // request can leak into network-aware downstream code.
+    const req = new Request("http://localhost/v1/sign");
+    _setPrincipalForTest(req, {
+      user: fakeUser(),
+      apiKey: fakeKey({ network: "mainnet" }),
+      kind: "api_key",
+    });
+    try {
+      requestNetwork(req);
+      throw new Error("should have thrown");
+    } catch (e) {
+      const err = e as AuthError;
+      expect(err).toBeInstanceOf(AuthError);
+      expect(err.status).toBe(403);
+      expect(err.code).toBe("NETWORK_DISABLED");
+    }
+  });
+
+  test("api key on an enabled network passes and returns its bound net", () => {
+    const req = new Request("http://localhost/v1/sign");
+    _setPrincipalForTest(req, {
+      user: fakeUser(),
+      apiKey: fakeKey({ network: "testnet" }),
+      kind: "api_key",
+    });
+    expect(requestNetwork(req)).toBe("testnet");
+  });
+
+  test("api-key path rejects x-network header that disagrees with key", () => {
+    const req = new Request("http://localhost/v1/sign", {
+      headers: { "x-network": "mainnet" },
+    });
+    _setPrincipalForTest(req, {
+      user: fakeUser(),
+      apiKey: fakeKey({ network: "testnet" }),
+      kind: "api_key",
+    });
+    try {
+      requestNetwork(req);
+      throw new Error("should have thrown");
+    } catch (e) {
+      const err = e as AuthError;
+      expect(err.code).toBe("NETWORK_MISMATCH");
+    }
   });
 });

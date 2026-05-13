@@ -35,6 +35,7 @@ import { env } from "@/config/env";
 import { log } from "@/config/log";
 import {
   charge as chargeCredits,
+  getBalance,
   OP_PRICES,
   refund as refundCredits,
 } from "@/features/billing/service";
@@ -145,6 +146,21 @@ export async function prepareSignRequest(
     throw errors.unprocessable(
       `dwallet status ${dw.status} cannot sign yet`,
       "DWALLET_NOT_ACTIVE",
+    );
+  }
+
+  // Reject zero-credit callers before allocating a presign. Without
+  // this gate, an attacker spinning unique Idempotency-Keys would
+  // burn one presign per 402 response (the row + presign sit waiting
+  // for the sweep to roll them back), draining the pool faster than
+  // refill. The atomic charge inside `chargeCredits` is still the
+  // canonical authority — this is the cheap up-front guard.
+  const signPrice = BigInt(OP_PRICES.sign);
+  const balance = await getBalance(args.userId, args.network);
+  if (balance < signPrice) {
+    throw errors.paymentRequired(
+      `insufficient credits: have ${balance}, need ${signPrice}`,
+      "INSUFFICIENT_CREDITS",
     );
   }
 
