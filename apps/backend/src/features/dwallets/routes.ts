@@ -19,18 +19,9 @@ import {
   onboardZeroTrust,
 } from "@/features/dwallets/service";
 import { requestNetwork, requireAuth } from "@/http/middleware/auth";
+import { fromHex } from "@/shared/codec/hex";
 import type { DWallet } from "@/shared/db/schema";
 import { errors } from "@/shared/errors";
-
-const HEX = /^[0-9a-fA-F]+$/;
-
-function fromHex(s: string): Uint8Array {
-  const stripped = s.startsWith("0x") ? s.slice(2) : s;
-  if (!HEX.test(stripped)) {
-    throw errors.validation("expected hex string", "BAD_HEX");
-  }
-  return Uint8Array.from(Buffer.from(stripped, "hex"));
-}
 
 function publicDwallet(d: DWallet) {
   return {

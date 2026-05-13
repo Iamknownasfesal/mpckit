@@ -46,6 +46,7 @@ import {
   rollbackToReady,
 } from "@/features/presigns/service";
 import { signSubmitUnknown } from "@/shared/cache/metrics";
+import { fromHex, toHex } from "@/shared/codec/hex";
 import { getDb } from "@/shared/db/client";
 import {
   accounts,
@@ -682,12 +683,4 @@ async function markFailed(
       .where(eq(presigns.id, presignId));
   }
   log.warn({ signRequestId, code, message }, "sign request failed");
-}
-
-function toHex(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString("hex");
-}
-
-function fromHex(s: string): Uint8Array {
-  return Uint8Array.from(Buffer.from(s, "hex"));
 }

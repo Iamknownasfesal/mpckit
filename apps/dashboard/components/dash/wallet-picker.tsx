@@ -9,6 +9,7 @@ import {
 } from "@mysten/dapp-kit";
 import type { WalletWithRequiredFeatures } from "@mysten/wallet-standard";
 import { ArrowUpRight, Check, ChevronRight, Plus, Wallet } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Kicker } from "@/components/dash/kicker";
@@ -194,7 +195,17 @@ function WalletRow({
     >
       <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl border bg-background">
         {wallet.icon ? (
-          <img src={wallet.icon} alt="" className="size-7 object-contain" />
+          // wallet-standard icons are base64 data URLs; remote
+          // optimisation is a no-op, so `unoptimized` saves the
+          // Next.js loader from trying to rewrite the src.
+          <Image
+            src={wallet.icon}
+            alt=""
+            width={28}
+            height={28}
+            unoptimized
+            className="size-7 object-contain"
+          />
         ) : (
           <Wallet className="size-4 text-muted-foreground" />
         )}

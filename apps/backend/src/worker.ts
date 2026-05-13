@@ -9,6 +9,7 @@
  */
 import { env } from "@/config/env";
 import { log } from "@/config/log";
+import { shutdownTelemetry } from "@/config/telemetry";
 import { registerBillingJobs } from "@/features/billing/jobs";
 import { registerPresignJobs } from "@/features/presigns/jobs";
 import { bucketHealth } from "@/features/presigns/service";
@@ -121,6 +122,7 @@ export async function startWorker(): Promise<void> {
     try {
       await closeBoss();
       await closeDb();
+      await shutdownTelemetry();
       log.info("graceful shutdown: complete");
       process.exit(0);
     } catch (err) {
