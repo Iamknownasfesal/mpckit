@@ -36,6 +36,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "test": "bun test",
     "prepublishOnly": "bun run build",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
