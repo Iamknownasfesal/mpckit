@@ -14,6 +14,7 @@
  */
 import { defaultNetwork, env } from "@/config/env";
 import { log } from "@/config/log";
+import { shutdownTelemetry } from "@/config/telemetry";
 import { bootstrapAdmin } from "@/features/auth/bootstrap";
 import { stopPriceFeed, warmPriceFeed } from "@/features/pricing/price-feed";
 import { warmupProtocolParameters } from "@/features/protocol-parameters/service";
@@ -87,7 +88,7 @@ export async function startApi(): Promise<void> {
       stopPriceFeed();
       stopBalancePoller();
       await app.stop();
-      await Promise.allSettled([closeDb(), closeRedis()]);
+      await Promise.allSettled([closeDb(), closeRedis(), shutdownTelemetry()]);
       log.info("graceful shutdown: complete");
       process.exit(0);
     } catch (err) {

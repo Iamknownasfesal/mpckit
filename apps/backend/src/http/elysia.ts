@@ -15,6 +15,7 @@ import { swagger } from "@elysiajs/swagger";
  */
 import { Elysia } from "elysia";
 import { env } from "@/config/env";
+import { Sentry } from "@/config/telemetry";
 import { accountRoutes } from "@/features/accounts/routes";
 import { betterAuthRoutes } from "@/features/auth/better-auth-routes";
 import { adminUserRoutes, userRoutes } from "@/features/auth/routes";
@@ -105,6 +106,14 @@ export function buildApp() {
         loggerFor(request).error({ err: error, code }, "request error");
         const status =
           code === "VALIDATION" ? 400 : code === "NOT_FOUND" ? 404 : 500;
+        // Sentry only sees the unexpected branch: AppError / AuthError
+        // are part of the API contract and shouldn't page anyone.
+        // No-op if `SENTRY_DSN` is unset.
+        if (status >= 500 && error instanceof Error) {
+          Sentry.captureException(error, {
+            tags: { http_status: String(status), error_code: String(code) },
+          });
+        }
         set.status = status;
         // Elysia validation errors carry actionable detail (which field
         // failed, expected shape) — clients need that to fix their

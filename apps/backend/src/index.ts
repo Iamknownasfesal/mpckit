@@ -8,6 +8,11 @@
  * In production, run the API and worker as separate Deployments in
  * Kubernetes so they scale independently.
  */
+// Side-effect import: starts OpenTelemetry + Sentry before any other
+// module (pg, ioredis, http, fetch) is loaded so auto-instrumentations
+// get a chance to monkey-patch Node's loaders. No-op when both
+// OTEL_EXPORTER_OTLP_ENDPOINT and SENTRY_DSN are unset.
+import "@/config/telemetry";
 import { startApi } from "@/api";
 import { env } from "@/config/env";
 import { log } from "@/config/log";

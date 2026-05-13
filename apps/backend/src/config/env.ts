@@ -316,7 +316,22 @@ const Schema = z.object({
   // Observability.
   /** Hot-wallet SUI balance poll interval (seconds). */
   OBSERVABILITY_BALANCE_POLL_SEC: z.coerce.number().int().min(10).default(60),
+  /**
+   * OpenTelemetry OTLP/HTTP collector endpoint. When set, the API +
+   * worker emit traces (HTTP, pg, ioredis, outgoing fetch) via the
+   * `@opentelemetry/auto-instrumentations-node` package.
+   */
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
+  /** Logical service name used as `service.name` on every span. */
+  OTEL_SERVICE_NAME: z.string().default("mpckit"),
+  /**
+   * Sentry DSN. When set, uncaught errors + `loggerFor(request).error`
+   * captures are forwarded for aggregation / alerting. Without it,
+   * Sentry stays inert.
+   */
+  SENTRY_DSN: z.string().optional(),
+  /** Fraction of traces forwarded to Sentry (0..1). */
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
   TELEMETRY_OPT_IN: z
     .enum(["true", "false"])
     .default("false")
