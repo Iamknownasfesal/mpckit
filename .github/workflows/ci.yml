@@ -80,6 +80,12 @@ jobs:
   security:
     name: security audit
     runs-on: ubuntu-latest
+    # `rustsec/audit-check@v2` posts a GitHub Check Run summarising the
+    # audit. That API needs `checks: write` — without it the action
+    # marks the job failed even when `cargo audit` itself ran clean.
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
