@@ -1,0 +1,30 @@
+# cargo-audit config — read by `cargo audit` and rustsec/audit-check.
+#
+# Entries here are vulnerabilities/warnings we have deliberately accepted
+# because (a) no upstream fix exists and (b) the affected code is only
+# reachable via the `crypto` feature on `mpckit`, which the workspace
+# Cargo.toml flags as not-currently-converging and which `mpckit` does
+# not ship to its prod users by default.
+#
+# Re-evaluate every time the `crypto` feature rev moves.
+
+[advisories]
+ignore = [
+    # rsa Marvin Attack timing sidechannel. Reachable only through
+    # fastcrypto when the `crypto` feature is on. Upstream has no fix.
+    "RUSTSEC-2023-0071",
+    # paste — unmaintained, no replacement. Via ark-ff (fastcrypto).
+    "RUSTSEC-2024-0436",
+    # bincode 1.x unmaintained. Via fastcrypto.
+    "RUSTSEC-2025-0141",
+    # derivative unmaintained. Via ark-ec (fastcrypto).
+    "RUSTSEC-2024-0388",
+]
+
+# curve25519-dalek 4.2.0 is yanked (pinned by inkrypto). cargo-audit
+# surfaces yanked crates separately from advisories — keep them as
+# warnings rather than failing the build, since the inkrypto rev pin
+# is what forces this version.
+[yanked]
+enabled = true
+update_index = true
