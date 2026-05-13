@@ -14,6 +14,7 @@ import { swagger } from "@elysiajs/swagger";
  * boundary — only the inferred type does.
  */
 import { Elysia } from "elysia";
+import { env } from "@/config/env";
 import { accountRoutes } from "@/features/accounts/routes";
 import { betterAuthRoutes } from "@/features/auth/better-auth-routes";
 import { adminUserRoutes, userRoutes } from "@/features/auth/routes";
@@ -105,8 +106,22 @@ export function buildApp() {
         const status =
           code === "VALIDATION" ? 400 : code === "NOT_FOUND" ? 404 : 500;
         set.status = status;
+        // Elysia validation errors carry actionable detail (which field
+        // failed, expected shape) — clients need that to fix their
+        // request, so we keep the original message for VALIDATION even
+        // in prod. Everything else with a 500-class status surfaces a
+        // generic message in production so DB driver text, internal
+        // paths, or stack-trace fragments don't leak to the client.
+        // The real message is still in the structured log above.
+        const isProd = env.NODE_ENV === "production";
+        const safeMessage =
+          isProd && status >= 500
+            ? "internal error"
+            : error instanceof Error
+              ? error.message
+              : "internal error";
         return {
-          error: error instanceof Error ? error.message : "internal error",
+          error: safeMessage,
           code: typeof code === "string" ? code : "INTERNAL_ERROR",
         };
       })
