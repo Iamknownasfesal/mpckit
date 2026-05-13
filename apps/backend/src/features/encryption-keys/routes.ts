@@ -8,16 +8,7 @@ import {
   registerEncryptionKey,
 } from "@/features/encryption-keys/service";
 import { requestNetwork, requireAuth } from "@/http/middleware/auth";
-
-const HEX = /^[0-9a-fA-F]+$/;
-
-function fromHex(s: string): Uint8Array {
-  const stripped = s.startsWith("0x") ? s.slice(2) : s;
-  if (!HEX.test(stripped)) {
-    throw new Error("expected hex string");
-  }
-  return Uint8Array.from(Buffer.from(stripped, "hex"));
-}
+import { fromHex } from "@/shared/codec/hex";
 
 export const encryptionKeyRoutes = new Elysia({ prefix: "/v1" })
   .get(
