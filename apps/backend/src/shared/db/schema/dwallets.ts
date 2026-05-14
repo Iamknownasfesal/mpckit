@@ -42,7 +42,7 @@ export const dwallets = pgTable(
      * bound to. Read from `dwallet.dwallet_network_encryption_key_id`
      * on chain when the dwallet activates; lazy-backfilled for older
      * rows via `ensureDwalletNek`. Sign-time presign allocation must
-     * match this NEK exactly — coordinator's
+     * match this NEK exactly; coordinator's
      * `validate_and_initiate_sign` aborts otherwise.
      */
     networkEncryptionKeyId: text("network_encryption_key_id"),
