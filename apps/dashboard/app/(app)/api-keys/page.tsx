@@ -51,7 +51,9 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError, api } from "@/lib/api";
+import { relativeDate } from "@/lib/format";
 import { type Network, useNetwork } from "@/lib/network";
+import { queryKeys } from "@/lib/query-keys";
 import { toastError } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
@@ -75,7 +77,7 @@ type IssuedKey = {
 export default function ApiKeysPage() {
   const qc = useQueryClient();
   const keys = useQuery({
-    queryKey: ["api-keys"],
+    queryKey: queryKeys.apiKeys.all,
     queryFn: () => api.get<{ keys: ApiKeyRow[] }>("/v1/users/me/api-keys"),
   });
 
@@ -97,7 +99,9 @@ export default function ApiKeysPage() {
         description="Bearer tokens for SDK callers. Plaintext is shown exactly once. After that, only the hash lives in our database."
         right={
           <CreateKeyDialog
-            onCreated={() => qc.invalidateQueries({ queryKey: ["api-keys"] })}
+            onCreated={() =>
+              qc.invalidateQueries({ queryKey: queryKeys.apiKeys.all })
+            }
           />
         }
       />
@@ -163,7 +167,7 @@ function KeyTable({
       toast.success("Key revoked", {
         description: `${rows.find((r) => r.id === id)?.prefix ?? ""}… will stop working immediately.`,
       });
-      qc.invalidateQueries({ queryKey: ["api-keys"] });
+      qc.invalidateQueries({ queryKey: queryKeys.apiKeys.all });
     },
     onError: (err) => toastError("Couldn't revoke key", err),
   });
@@ -676,16 +680,4 @@ function KeyTableSkeleton() {
       </TableBody>
     </Table>
   );
-}
-
-function relativeDate(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
 }

@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowUpRight, Wallet } from "lucide-react";
 import Link from "next/link";
+import { DwalletStatus } from "@/components/dash/dwallet-status";
 import { CopyMono, Mono } from "@/components/dash/mono";
 import { PageHeader } from "@/components/dash/page-header";
-import { StatusPill } from "@/components/dash/status-pill";
 import { Tile, TileHeader } from "@/components/dash/tile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +19,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
+import { curveLabel } from "@/lib/dwallet-curves";
+import { relativeDate } from "@/lib/format";
 import { useNetwork } from "@/lib/network";
+import { queryKeys } from "@/lib/query-keys";
 
 type DwalletRow = {
   id: string;
@@ -34,17 +37,10 @@ type DwalletRow = {
   createdAt: string;
 };
 
-const CURVE_LABELS: Record<number, string> = {
-  0: "secp256k1",
-  1: "secp256r1",
-  2: "ed25519",
-  3: "ristretto",
-};
-
 export default function DwalletsPage() {
   const network = useNetwork();
   const dwallets = useQuery({
-    queryKey: ["dwallets", network],
+    queryKey: queryKeys.dwallets.all(network),
     queryFn: () => api.get<{ dwallets: DwalletRow[] }>("/v1/dwallets"),
   });
 
@@ -146,15 +142,13 @@ export default function DwalletsPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        <Mono>
-                          {CURVE_LABELS[d.curve] ?? `curve-${d.curve}`}
-                        </Mono>
+                        <Mono>{curveLabel(d.curve)}</Mono>
                       </TableCell>
                       <TableCell>
                         <Mono>{d.kind}</Mono>
                       </TableCell>
                       <TableCell>
-                        <DStatus status={d.status} />
+                        <DwalletStatus status={d.status} />
                       </TableCell>
                       <TableCell className="t-mono text-[11.5px] text-muted-foreground">
                         {relativeDate(d.createdAt)}
@@ -219,19 +213,6 @@ function Stat({
       ) : null}
     </div>
   );
-}
-
-function DStatus({ status }: { status: string }) {
-  if (status === "Active") return <StatusPill tone="live">{status}</StatusPill>;
-  if (status === "AwaitingKeyHolderSignature")
-    return (
-      <StatusPill tone="warn" pulse>
-        awaiting share
-      </StatusPill>
-    );
-  if (status === "Failed")
-    return <StatusPill tone="danger">{status}</StatusPill>;
-  return <StatusPill tone="neutral">{status}</StatusPill>;
 }
 
 function EmptyState() {
@@ -305,16 +286,4 @@ function DwalletSkeleton() {
 function shortId(id: string): string {
   if (id.length <= 16) return id;
   return `${id.slice(0, 10)}…${id.slice(-6)}`;
-}
-
-function relativeDate(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
 }

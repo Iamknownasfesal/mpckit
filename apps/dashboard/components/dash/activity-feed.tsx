@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Mono } from "@/components/dash/mono";
 import { Skeleton } from "@/components/ui/skeleton";
+import { relativeDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export type AuditEvent = {
@@ -192,16 +193,4 @@ function fullDate(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
-}
-
-function relativeDate(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
 }
