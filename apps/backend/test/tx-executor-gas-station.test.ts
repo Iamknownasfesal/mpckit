@@ -27,7 +27,12 @@ mock.module("@/config/env", () => ({
 }));
 
 mock.module("@/config/log", () => ({
-  log: { info: () => undefined, warn: () => undefined, error: () => undefined },
+  log: {
+    debug: () => undefined,
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  },
 }));
 
 mock.module("@/shared/redis/lock", () => ({

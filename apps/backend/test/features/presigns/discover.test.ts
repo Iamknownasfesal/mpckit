@@ -13,7 +13,7 @@
  * and that is the NEK the row must be bound to (NOT some "latest" key
  * the operator has rotated to since).
  */
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 const NETWORK = "testnet";
 const OPERATOR =
@@ -49,7 +49,16 @@ type LtNode = {
   col: { name: string };
   val: unknown;
 };
+type DescNode = { __op: "desc"; col: { name: string } };
 
+// IMPORTANT: enumerate every drizzle-orm export touched by ANY module
+// the in-process suite loads, not just the ones this test exercises.
+// Bun's `mock.module` shapes the module record once on first call,
+// and ESM bindings are static, so a later `mock.module("drizzle-orm",
+// {...desc...})` in sibling files cannot add `desc` to the shape we
+// printed here. The billing service imports `desc`, so omitting it
+// would surface as `SyntaxError: Export named 'desc' not found` when
+// billing tests run after this file.
 mock.module("drizzle-orm", () => ({
   eq: (col: unknown, val: unknown): EqNode => ({
     __op: "eq",
@@ -62,6 +71,7 @@ mock.module("drizzle-orm", () => ({
     col,
     val,
   }),
+  desc: (col: { name: string }): DescNode => ({ __op: "desc", col }),
   sql: (strings: TemplateStringsArray, ...values: unknown[]): SqlNode => ({
     __op: "sql",
     strings,
@@ -436,6 +446,16 @@ describe("presigns.discover", () => {
     fakeSuiClient.core.getTransaction.mockClear();
     fakeIkaClient.getPresign.mockClear();
     fakeIkaClient.getLatestNetworkEncryptionKey.mockClear();
+  });
+
+  afterAll(() => {
+    // Clears function-level `mock(...)` state. The `drizzle-orm` stub
+    // above intentionally lists every export the in-process suite
+    // touches (eq, and, lt, desc, sql) so the ESM shape it freezes is
+    // forward-compatible with sibling files; otherwise their import
+    // of e.g. `desc` would surface as "Export named 'desc' not found"
+    // because Bun's `mock.module` doesn't add bindings retroactively.
+    mock.restore();
   });
 
   test("binds inserted row to mint-tx NEK, not operator latest", async () => {

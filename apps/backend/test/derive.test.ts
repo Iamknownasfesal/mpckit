@@ -10,8 +10,17 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 
 const envMock: Record<string, unknown> = {};
 mock.module("@/config/env", () => ({ env: envMock }));
+// Include every level the pino logger exposes. Bun's `mock.module` is
+// process-global and ESM bindings are static, so a missing `debug`
+// here would leak undefined into sibling files whose code calls
+// `log.debug` (verified empirically in 1.3.x).
 mock.module("@/config/log", () => ({
-  log: { info: () => undefined, warn: () => undefined, error: () => undefined },
+  log: {
+    debug: () => undefined,
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  },
 }));
 
 const { deriveDepositAddress, deriveDepositKeypair } = await import(

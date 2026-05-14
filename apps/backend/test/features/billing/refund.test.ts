@@ -12,7 +12,7 @@
  * to identify which column an `eq(...)` references without invoking
  * real Postgres or the drizzle SQL builder.
  */
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 const NETWORK = "testnet";
@@ -442,6 +442,15 @@ async function seedAccount(userId: string, network: string, credits: bigint) {
 describe("billing.refund clamp + idempotency", () => {
   beforeEach(() => {
     resetState();
+  });
+
+  afterAll(() => {
+    // Clear any `mock(...)` function spies this file created. Bun
+    // 1.3.x does NOT undo `mock.module` registrations through
+    // `mock.restore()`, but the `drizzle-orm` and `@/shared/db/client`
+    // stubs here are full-surface so they remain forward-compatible
+    // if a later file imports the same modules.
+    mock.restore();
   });
 
   test("equal-to-charge refund restores balance exactly", async () => {
