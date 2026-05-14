@@ -43,14 +43,16 @@ import { getTxExecutor } from "@/shared/sui/tx-executor";
 // ---------------------------------------------------------------------------
 
 /**
- * Atomically claim one `ready` presign for `signRequestId`. Returns
- * `undefined` if the bucket is empty (caller decides to wait, retry,
- * or trigger a refill).
+ * Atomically claim one `ready` presign matching the dwallet's NEK for
+ * `signRequestId`. Returns `undefined` if no matching presign is
+ * available (caller decides to refund + surface
+ * `PRESIGN_POOL_EMPTY_FOR_NEK`).
  */
 export async function allocate(args: {
   network: IkaNetwork;
   curve: number;
   signatureAlgorithm: number;
+  networkEncryptionKeyId: string;
   signRequestId: string;
 }): Promise<Presign | undefined> {
   // Raw UPDATE … SELECT FOR UPDATE SKIP LOCKED for atomic claim across
@@ -69,6 +71,7 @@ export async function allocate(args: {
       WHERE network = ${args.network}
         AND curve = ${args.curve}
         AND signature_algorithm = ${args.signatureAlgorithm}
+        AND network_encryption_key_id = ${args.networkEncryptionKeyId}
         AND status = 'ready'
       ORDER BY created_at
       LIMIT 1
@@ -120,16 +123,47 @@ export async function rollbackToReady(
 // Pool health
 // ---------------------------------------------------------------------------
 
-export interface BucketHealth {
-  network: string;
-  curve: number;
-  signatureAlgorithm: number;
+export interface BucketCounts {
   ready: number;
   allocated: number;
   consumedPending: number;
   pending: number;
   used: number;
   failed: number;
+}
+
+export interface BucketHealth extends BucketCounts {
+  network: string;
+  curve: number;
+  signatureAlgorithm: number;
+  /**
+   * Per-NEK breakdown of the same counts. Sign-time allocation is
+   * NEK-scoped (a dwallet on NEK_A can't consume a presign minted
+   * under NEK_B even within the same bucket), so the top-level
+   * rollup can be misleading when the operator has rotated keys.
+   * Keys are NEK ids as stored in `presigns.network_encryption_key_id`.
+   */
+  perNek: Record<string, BucketCounts>;
+}
+
+function emptyCounts(): BucketCounts {
+  return {
+    ready: 0,
+    allocated: 0,
+    consumedPending: 0,
+    pending: 0,
+    used: 0,
+    failed: 0,
+  };
+}
+
+function setStatusCount(target: BucketCounts, status: string, n: number): void {
+  if (status === "ready") target.ready = n;
+  else if (status === "allocated") target.allocated = n;
+  else if (status === "consumed_pending") target.consumedPending = n;
+  else if (status === "pending") target.pending = n;
+  else if (status === "used") target.used = n;
+  else if (status === "failed") target.failed = n;
 }
 
 export async function bucketHealth(
@@ -139,29 +173,49 @@ export async function bucketHealth(
 ): Promise<BucketHealth> {
   const result = await getDb().execute<{
     status: string;
+    network_encryption_key_id: string;
     n: string;
   }>(sql`
-    SELECT status, COUNT(*)::text AS n
+    SELECT status, network_encryption_key_id, COUNT(*)::text AS n
     FROM ${presigns}
     WHERE network = ${network}
       AND curve = ${curve}
       AND signature_algorithm = ${signatureAlgorithm}
-    GROUP BY status
+    GROUP BY status, network_encryption_key_id
   `);
-  const rows = rowsOf<{ status: string; n: string }>(result);
-  const counts: Record<string, number> = {};
-  for (const r of rows) counts[r.status] = Number.parseInt(r.n, 10);
+  const rows = rowsOf<{
+    status: string;
+    network_encryption_key_id: string;
+    n: string;
+  }>(result);
+
+  const totals = emptyCounts();
+  const perNek: Record<string, BucketCounts> = {};
+  for (const r of rows) {
+    const n = Number.parseInt(r.n, 10);
+    setStatusCount(totals, r.status, (statusCount(totals, r.status) ?? 0) + n);
+    const nekKey = r.network_encryption_key_id;
+    if (!perNek[nekKey]) perNek[nekKey] = emptyCounts();
+    setStatusCount(perNek[nekKey]!, r.status, n);
+  }
+
   return {
     network,
     curve,
     signatureAlgorithm,
-    ready: counts.ready ?? 0,
-    allocated: counts.allocated ?? 0,
-    consumedPending: counts.consumed_pending ?? 0,
-    pending: counts.pending ?? 0,
-    used: counts.used ?? 0,
-    failed: counts.failed ?? 0,
+    ...totals,
+    perNek,
   };
+}
+
+function statusCount(c: BucketCounts, status: string): number | undefined {
+  if (status === "ready") return c.ready;
+  if (status === "allocated") return c.allocated;
+  if (status === "consumed_pending") return c.consumedPending;
+  if (status === "pending") return c.pending;
+  if (status === "used") return c.used;
+  if (status === "failed") return c.failed;
+  return undefined;
 }
 
 // ---------------------------------------------------------------------------
