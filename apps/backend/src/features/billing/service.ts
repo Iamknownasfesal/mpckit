@@ -329,6 +329,50 @@ export async function refund(args: RefundArgs): Promise<BillingCharge> {
   });
 }
 
+export interface ChargeWithRefundArgs {
+  userId: string;
+  network: string;
+  opType: string;
+  amountMicro: bigint;
+  chargeReason: string;
+  /** Builds the refund reason from the thrown error; suffix is truncated. */
+  refundReason: (err: unknown) => string;
+}
+
+/**
+ * Charge upfront, run `fn`, refund on throw. The charge and refund share
+ * a generated `opId` so they pair in the ledger. For flows that need
+ * conditional refunds (e.g. sign, where the worker decides per failure
+ * phase) call `charge` / `refund` directly with a stable `opId`.
+ */
+export async function chargeWithRefund<T>(
+  args: ChargeWithRefundArgs,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const opId = crypto.randomUUID();
+  await charge({
+    userId: args.userId,
+    network: args.network,
+    opType: args.opType,
+    opId,
+    amountMicro: args.amountMicro,
+    reason: args.chargeReason,
+  });
+  try {
+    return await fn();
+  } catch (err) {
+    await refund({
+      userId: args.userId,
+      network: args.network,
+      opType: args.opType,
+      opId,
+      amountMicro: args.amountMicro,
+      reason: args.refundReason(err).slice(0, 200),
+    });
+    throw err;
+  }
+}
+
 export async function listDeposits(
   userId: string,
   network: string,

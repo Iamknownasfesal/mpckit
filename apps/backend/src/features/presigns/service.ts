@@ -116,17 +116,6 @@ export async function rollbackToReady(
   log.info({ presignId, reason }, "presign rolled back to ready");
 }
 
-export async function markFailed(
-  presignId: string,
-  reason: string,
-): Promise<void> {
-  await getDb()
-    .update(presigns)
-    .set({ status: "failed", updatedAt: new Date() })
-    .where(eq(presigns.id, presignId));
-  log.warn({ presignId, reason }, "presign marked failed");
-}
-
 // ---------------------------------------------------------------------------
 // Pool health
 // ---------------------------------------------------------------------------

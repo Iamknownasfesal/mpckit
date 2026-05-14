@@ -65,7 +65,7 @@ import { enqueue } from "@/shared/queue/client";
 import { JOBS } from "@/shared/queue/types";
 import { getSuiClient } from "@/shared/sui/client";
 import { findEvents } from "@/shared/sui/effects";
-import { buildSignZeroTrust, type Network } from "@/shared/sui/move-calls";
+import { buildSignZeroTrust } from "@/shared/sui/move-calls";
 import { getTxExecutor, TxExecutorError } from "@/shared/sui/tx-executor";
 
 // ---------------------------------------------------------------------------
@@ -409,7 +409,7 @@ export async function processSignJob(signRequestId: string): Promise<void> {
 
   const tx = new Transaction();
   buildSignZeroTrust(tx, {
-    network: sr.network as Network,
+    network: srNetwork,
     accountId: accountSuiId,
     coordinatorId,
     dwalletId: sr.suiDwalletId,
@@ -505,7 +505,7 @@ export async function processSignJob(signRequestId: string): Promise<void> {
 
   // Top up the bucket we just drained.
   await enqueue(JOBS.presignRefill, {
-    network: sr.network as IkaNetwork,
+    network: srNetwork,
     curve: sr.curve,
     signatureAlgorithm: sr.signatureAlgorithm,
     count: 1,

@@ -19,11 +19,7 @@ import { Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
 import { and, eq } from "drizzle-orm";
 import type { IkaNetwork } from "@/config/env";
-import {
-  charge as chargeCredits,
-  OP_PRICES,
-  refund as refundCredits,
-} from "@/features/billing/service";
+import { chargeWithRefund, OP_PRICES } from "@/features/billing/service";
 import { getDb } from "@/shared/db/client";
 import { type EncryptionKey, encryptionKeys } from "@/shared/db/schema";
 import { errors } from "@/shared/errors";
@@ -67,16 +63,6 @@ export async function registerEncryptionKey(
   const dwalletPackageId = cfg.packages.ikaDwallet2pcMpcPackage;
   const coordinatorId = cfg.objects.ikaDWalletCoordinator.objectID;
 
-  const chargeOpId = crypto.randomUUID();
-  await chargeCredits({
-    userId: args.userId,
-    network: args.network,
-    opType: "encryption-key",
-    opId: chargeOpId,
-    amountMicro: BigInt(OP_PRICES["encryption-key"]),
-    reason: "register encryption key",
-  });
-
   const tx = new Transaction();
   buildRegisterEncryptionKey(tx, {
     dwalletPackageId,
@@ -87,22 +73,18 @@ export async function registerEncryptionKey(
     signerPublicKey: args.signerPublicKey,
   });
 
-  let executed: Awaited<
-    ReturnType<ReturnType<typeof getTxExecutor>["execute"]>
-  >;
-  try {
-    executed = await getTxExecutor(args.network).execute(tx);
-  } catch (err) {
-    await refundCredits({
+  const executed = await chargeWithRefund(
+    {
       userId: args.userId,
       network: args.network,
       opType: "encryption-key",
-      opId: chargeOpId,
       amountMicro: BigInt(OP_PRICES["encryption-key"]),
-      reason: `register encryption key submit failed: ${String(err).slice(0, 200)}`,
-    });
-    throw err;
-  }
+      chargeReason: "register encryption key",
+      refundReason: (err) =>
+        `register encryption key submit failed: ${String(err)}`,
+    },
+    () => getTxExecutor(args.network).execute(tx),
+  );
   const suiObjectId = findFirstCreatedByType(executed, "::EncryptionKey");
 
   const inserted = await db

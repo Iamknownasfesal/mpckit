@@ -22,11 +22,7 @@ import { CoordinatorInnerModule, SessionsManagerModule } from "@ika.xyz/sdk";
 import { Transaction } from "@mysten/sui/transactions";
 import { and, eq } from "drizzle-orm";
 import { findAccountForUser, recordAccount } from "@/features/accounts/service";
-import {
-  charge as chargeCredits,
-  OP_PRICES,
-  refund as refundCredits,
-} from "@/features/billing/service";
+import { chargeWithRefund, OP_PRICES } from "@/features/billing/service";
 import { getDb } from "@/shared/db/client";
 import {
   accounts,
@@ -100,20 +96,6 @@ export async function onboardZeroTrust(
   const coordinatorId = ika.ikaConfig.objects.ikaDWalletCoordinator.objectID;
   const existing = await findAccountForUser(args.userId, args.network);
 
-  // Charge before submit. opId is a freshly-minted uuid so the charge
-  // is uniquely identifiable in the billing ledger; we surface it in
-  // logs for traceability but don't persist it on the dwallet row,
-  // since the row may not exist if submit fails.
-  const chargeOpId = crypto.randomUUID();
-  await chargeCredits({
-    userId: args.userId,
-    network: args.network,
-    opType: "dwallet.dkg",
-    opId: chargeOpId,
-    amountMicro: BigInt(OP_PRICES["dwallet.dkg"]),
-    reason: "zero-trust DKG",
-  });
-
   const tx = new Transaction();
   if (existing) {
     buildAddDwalletZeroTrust(tx, {
@@ -146,22 +128,17 @@ export async function onboardZeroTrust(
     });
   }
 
-  let executed: Awaited<
-    ReturnType<ReturnType<typeof getTxExecutor>["execute"]>
-  >;
-  try {
-    executed = await getTxExecutor(args.network).execute(tx);
-  } catch (err) {
-    await refundCredits({
+  const executed = await chargeWithRefund(
+    {
       userId: args.userId,
       network: args.network,
       opType: "dwallet.dkg",
-      opId: chargeOpId,
       amountMicro: BigInt(OP_PRICES["dwallet.dkg"]),
-      reason: `DKG submit failed: ${String(err).slice(0, 200)}`,
-    });
-    throw err;
-  }
+      chargeReason: "zero-trust DKG",
+      refundReason: (err) => `DKG submit failed: ${String(err)}`,
+    },
+    () => getTxExecutor(args.network).execute(tx),
+  );
 
   const accountRow = existing
     ? existing
