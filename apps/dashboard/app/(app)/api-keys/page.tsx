@@ -52,6 +52,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError, api } from "@/lib/api";
 import { type Network, useNetwork } from "@/lib/network";
+import { toastError } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type ApiKeyRow = {
@@ -164,10 +165,7 @@ function KeyTable({
       });
       qc.invalidateQueries({ queryKey: ["api-keys"] });
     },
-    onError: (err) =>
-      toast.error("Couldn't revoke key", {
-        description: err instanceof ApiError ? err.message : "Unknown error",
-      }),
+    onError: (err) => toastError("Couldn't revoke key", err),
   });
 
   return (
@@ -318,10 +316,7 @@ function CreateKeyDialog({ onCreated }: { onCreated: () => void }) {
       setIssued(data);
       onCreated();
     },
-    onError: (err) =>
-      toast.error("Couldn't create key", {
-        description: err instanceof ApiError ? err.message : "Unknown error",
-      }),
+    onError: (err) => toastError("Couldn't create key", err),
   });
 
   function reset() {

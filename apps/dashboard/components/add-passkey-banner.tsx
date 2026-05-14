@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Tile } from "@/components/dash/tile";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
+import { toastError } from "@/lib/toast";
 
 const DISMISS_KEY = "mpckit:passkey-banner-dismissed";
 
@@ -31,9 +32,11 @@ export function AddPasskeyBanner() {
     try {
       const res = await authClient.passkey.addPasskey();
       if (res?.error) {
-        toast.error("Couldn't register passkey", {
-          description: res.error.message ?? "Please try again",
-        });
+        toastError(
+          "Couldn't register passkey",
+          undefined,
+          res.error.message ?? "Please try again",
+        );
         setState("show");
         return;
       }
@@ -43,9 +46,7 @@ export function AddPasskeyBanner() {
       setState("registered");
       window.localStorage.setItem(DISMISS_KEY, "1");
     } catch (e) {
-      toast.error("Couldn't register passkey", {
-        description: e instanceof Error ? e.message : "Unknown error",
-      });
+      toastError("Couldn't register passkey", e);
       setState("show");
     }
   }

@@ -103,6 +103,17 @@ const Schema = z.object({
    * + sign).
    */
   SUI_GAS_STATION_RESERVE_SECS: z.coerce.number().int().positive().default(30),
+  /**
+   * AbortController timeout for each HTTP call to the gas-station
+   * (`/v1/reserve_gas` + `/v1/execute_tx`). Must be smaller than the
+   * Redis tx-lock TTL (currently 30s) so a hung daemon can't keep the
+   * OperatorCap pinned for the full lock window.
+   */
+  SUI_GAS_STATION_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(20_000),
 
   // L2 + L3.
   REDIS_URL: z.string().optional(),

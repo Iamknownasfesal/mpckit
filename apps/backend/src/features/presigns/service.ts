@@ -29,6 +29,7 @@ import { and, eq, lt, sql } from "drizzle-orm";
 import { env, type IkaNetwork } from "@/config/env";
 import { log } from "@/config/log";
 import { getDb } from "@/shared/db/client";
+import { rowsOf } from "@/shared/db/raw";
 import { type Presign, presigns } from "@/shared/db/schema";
 import { errors } from "@/shared/errors";
 import { getIkaClient } from "@/shared/ika/client";
@@ -75,10 +76,7 @@ export async function allocate(args: {
     )
     RETURNING id
   `);
-  const rows =
-    (claimed as unknown as { rows?: { id: string }[] }).rows ??
-    (claimed as unknown as { id: string }[]);
-  const id = Array.isArray(rows) ? rows[0]?.id : undefined;
+  const id = rowsOf<{ id: string }>(claimed)[0]?.id;
   if (!id) return undefined;
   const typed = await getDb()
     .select()
@@ -161,9 +159,7 @@ export async function bucketHealth(
       AND signature_algorithm = ${signatureAlgorithm}
     GROUP BY status
   `);
-  const rows =
-    (result as unknown as { rows?: { status: string; n: string }[] }).rows ??
-    (result as unknown as { status: string; n: string }[]);
+  const rows = rowsOf<{ status: string; n: string }>(result);
   const counts: Record<string, number> = {};
   for (const r of rows) counts[r.status] = Number.parseInt(r.n, 10);
   return {

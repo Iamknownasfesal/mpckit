@@ -11,7 +11,6 @@ import type { WalletWithRequiredFeatures } from "@mysten/wallet-standard";
 import { ArrowUpRight, Check, ChevronRight, Plus, Wallet } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Kicker } from "@/components/dash/kicker";
 import {
   Dialog,
@@ -20,6 +19,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { shortSuiAddress } from "@/lib/identity";
+import { toastError } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 const SUGGESTED: { name: string; url: string; blurb: string }[] = [
@@ -68,9 +69,7 @@ export function WalletPickerDialog({
       if (account) onConnected?.({ address: account.address });
       onOpenChange(false);
     } catch (e) {
-      toast.error("Couldn't connect wallet", {
-        description: e instanceof Error ? e.message : "Unknown error",
-      });
+      toastError("Couldn't connect wallet", e);
     } finally {
       setPending(null);
     }
@@ -222,7 +221,7 @@ function WalletRow({
         </div>
         {isCurrent && currentAddress ? (
           <code className="t-mono mt-0.5 block text-[10.5px] text-muted-foreground">
-            {shortAddress(currentAddress)}
+            {shortSuiAddress(currentAddress)}
           </code>
         ) : null}
       </div>
@@ -251,9 +250,4 @@ function EmptyInstall() {
       </p>
     </div>
   );
-}
-
-function shortAddress(addr: string): string {
-  if (addr.length <= 12) return addr;
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }

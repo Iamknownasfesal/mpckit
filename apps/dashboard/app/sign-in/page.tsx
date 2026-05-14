@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
+import { shortSuiAddress } from "@/lib/identity";
 
 const POST_SIGNIN = "/overview";
 
@@ -246,7 +247,7 @@ export default function SignInPage() {
                     {pending === "sui"
                       ? "Awaiting signature…"
                       : account
-                        ? `Sign in as ${shortAddr(account.address)}`
+                        ? `Sign in as ${shortSuiAddress(account.address)}`
                         : "Sign in with Sui wallet"}
                   </Button>
                   {account ? (
@@ -333,8 +334,4 @@ export default function SignInPage() {
       </div>
     </main>
   );
-}
-
-function shortAddr(addr: string): string {
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }

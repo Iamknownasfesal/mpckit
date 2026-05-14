@@ -44,9 +44,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ApiError, api } from "@/lib/api";
+import { api } from "@/lib/api";
 import { coinMeta } from "@/lib/coins";
 import { suiscanObjectUrl, suiscanTxUrl, useNetwork } from "@/lib/network";
+import { toastError } from "@/lib/toast";
 
 type BalanceRes = { creditsMicro: string; creditsUsd: string };
 type AddressRes = { address: string };
@@ -625,10 +626,7 @@ function DeclareDepositDialog() {
       setDigest("");
       qc.invalidateQueries({ queryKey: ["billing"] });
     },
-    onError: (err) =>
-      toast.error("Couldn't credit deposit", {
-        description: err instanceof ApiError ? err.message : "Unknown error",
-      }),
+    onError: (err) => toastError("Couldn't credit deposit", err),
   });
 
   return (

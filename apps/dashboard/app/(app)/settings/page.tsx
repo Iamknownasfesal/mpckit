@@ -37,6 +37,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { authClient, useSession } from "@/lib/auth-client";
 import { identityDisplay } from "@/lib/identity";
+import { toastError } from "@/lib/toast";
 
 type PasskeyRow = {
   id: string;
@@ -134,10 +135,7 @@ function ProfileCard() {
       setEditing(false);
       refetch();
     },
-    onError: (err) =>
-      toast.error("Couldn't update profile", {
-        description: err instanceof Error ? err.message : "Unknown error",
-      }),
+    onError: (err) => toastError("Couldn't update profile", err),
   });
 
   if (!user) {
@@ -272,10 +270,7 @@ function PasskeysCard() {
       toast.success("Passkey added");
       qc.invalidateQueries({ queryKey: ["passkeys"] });
     },
-    onError: (err) =>
-      toast.error("Couldn't add passkey", {
-        description: err instanceof Error ? err.message : "Unknown error",
-      }),
+    onError: (err) => toastError("Couldn't add passkey", err),
   });
 
   const remove = useMutation({
@@ -288,10 +283,7 @@ function PasskeysCard() {
       toast.success("Passkey removed");
       qc.invalidateQueries({ queryKey: ["passkeys"] });
     },
-    onError: (err) =>
-      toast.error("Couldn't remove passkey", {
-        description: err instanceof Error ? err.message : "Unknown error",
-      }),
+    onError: (err) => toastError("Couldn't remove passkey", err),
   });
 
   const rows = passkeys.data ?? [];
@@ -403,9 +395,11 @@ function SessionsCard() {
       await refetchSession();
     },
     onError: () =>
-      toast.error("Couldn't revoke session", {
-        description: "Try again or sign out everywhere.",
-      }),
+      toastError(
+        "Couldn't revoke session",
+        undefined,
+        "Try again or sign out everywhere.",
+      ),
   });
 
   const rows = sessions.data ?? [];
@@ -521,9 +515,7 @@ function DangerZone() {
       window.location.href = "/sign-in";
     },
     onError: () =>
-      toast.error("Couldn't sign out", {
-        description: "Try again in a moment.",
-      }),
+      toastError("Couldn't sign out", undefined, "Try again in a moment."),
   });
 
   return (
