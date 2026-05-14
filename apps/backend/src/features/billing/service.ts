@@ -277,8 +277,9 @@ export interface RefundArgs {
 }
 
 /**
- * Idempotent refund. Pairs with a prior `charge` row but doesn't require
- * one. Unique on `(network, opType, opId, kind=refund)`.
+ * Idempotent refund. Pairs with a prior `charge` row, and the refund
+ * amount is clamped to the not-yet-refunded portion of the matching
+ * charges. Unique on `(network, opType, opId, kind=refund)`.
  */
 export async function refund(args: RefundArgs): Promise<BillingCharge> {
   if (args.amountMicro <= 0n) {
@@ -300,6 +301,51 @@ export async function refund(args: RefundArgs): Promise<BillingCharge> {
       )
       .limit(1);
     if (existing[0]) return existing[0];
+
+    // Defense-in-depth clamp. The op-scoped unique index keeps a refund
+    // call idempotent, but it doesn't stop a buggy worker from passing
+    // an inflated `amountMicro`. Sum the matching charge rows (negative
+    // deltas, so we take abs) and subtract any prior refund deltas
+    // (positive) to compute the remaining refundable amount.
+    const chargeRows = await tx
+      .select({ creditsMicro: billingCharges.creditsMicro })
+      .from(billingCharges)
+      .where(
+        and(
+          eq(billingCharges.network, args.network),
+          eq(billingCharges.opType, args.opType),
+          eq(billingCharges.opId, args.opId),
+          eq(billingCharges.kind, "charge"),
+        ),
+      );
+    let chargedTotal = 0n;
+    for (const row of chargeRows) chargedTotal += -row.creditsMicro;
+    if (chargedTotal === 0n) {
+      throw errors.unprocessable(
+        `refund has no matching charge for op ${args.opType}/${args.opId} on ${args.network}`,
+        "REFUND_NO_MATCHING_CHARGE",
+      );
+    }
+    const priorRefundRows = await tx
+      .select({ creditsMicro: billingCharges.creditsMicro })
+      .from(billingCharges)
+      .where(
+        and(
+          eq(billingCharges.network, args.network),
+          eq(billingCharges.opType, args.opType),
+          eq(billingCharges.opId, args.opId),
+          eq(billingCharges.kind, "refund"),
+        ),
+      );
+    let priorRefunded = 0n;
+    for (const row of priorRefundRows) priorRefunded += row.creditsMicro;
+    const maxRefundable = chargedTotal - priorRefunded;
+    if (args.amountMicro > maxRefundable) {
+      throw errors.unprocessable(
+        `refund ${args.amountMicro} exceeds max refundable ${maxRefundable} (charged ${chargedTotal}, prior refunded ${priorRefunded})`,
+        "REFUND_EXCEEDS_CHARGE",
+      );
+    }
 
     await tx
       .update(billingAccounts)
