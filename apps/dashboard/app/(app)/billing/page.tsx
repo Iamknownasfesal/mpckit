@@ -46,7 +46,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import { coinMeta } from "@/lib/coins";
+import { relativeDate } from "@/lib/format";
 import { suiscanObjectUrl, suiscanTxUrl, useNetwork } from "@/lib/network";
+import { queryKeys } from "@/lib/query-keys";
 import { toastError } from "@/lib/toast";
 
 type BalanceRes = { creditsMicro: string; creditsUsd: string };
@@ -89,20 +91,20 @@ type ChargeRow = {
 export default function BillingPage() {
   const network = useNetwork();
   const balance = useQuery({
-    queryKey: ["billing", "balance", network],
+    queryKey: queryKeys.billing.balance(network),
     queryFn: () => api.get<BalanceRes>("/v1/billing/balance"),
     refetchInterval: 10_000,
   });
   const address = useQuery({
-    queryKey: ["billing", "address", network],
+    queryKey: queryKeys.billing.address(network),
     queryFn: () => api.get<AddressRes>("/v1/billing/address"),
   });
   const pricing = useQuery({
-    queryKey: ["billing", "pricing"],
+    queryKey: queryKeys.billing.pricing(),
     queryFn: () => api.get<PricingRes>("/v1/billing/pricing"),
   });
   const history = useQuery({
-    queryKey: ["billing", "history", network],
+    queryKey: queryKeys.billing.history(network),
     queryFn: () =>
       api.get<{ deposits: DepositRow[]; charges: ChargeRow[] }>(
         "/v1/billing/history",
@@ -624,7 +626,7 @@ function DeclareDepositDialog() {
       );
       setOpen(false);
       setDigest("");
-      qc.invalidateQueries({ queryKey: ["billing"] });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.all });
     },
     onError: (err) => toastError("Couldn't credit deposit", err),
   });
@@ -776,16 +778,4 @@ function formatUsdAmount(micro: number | string): string {
 function shortAddress(addr: string): string {
   if (addr.length <= 22) return addr;
   return `${addr.slice(0, 10)}…${addr.slice(-8)}`;
-}
-
-function relativeDate(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
 }

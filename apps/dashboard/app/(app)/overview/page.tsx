@@ -15,15 +15,16 @@ import {
 import Link from "next/link";
 import { AddPasskeyBanner } from "@/components/add-passkey-banner";
 import { ActivityFeed, type AuditEvent } from "@/components/dash/activity-feed";
+import { DwalletStatus } from "@/components/dash/dwallet-status";
 import { CopyMono } from "@/components/dash/mono";
 import { PageHeader } from "@/components/dash/page-header";
-import { StatusPill } from "@/components/dash/status-pill";
 import { Tile, TileBody, TileHeader } from "@/components/dash/tile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/auth-client";
 import { useNetwork } from "@/lib/network";
+import { queryKeys } from "@/lib/query-keys";
 
 type BalanceRes = { creditsMicro: string; creditsUsd: string };
 type KeysRes = {
@@ -51,19 +52,19 @@ export default function OverviewPage() {
   const { data: session } = useSession();
   const network = useNetwork();
   const balance = useQuery({
-    queryKey: ["billing", "balance", network],
+    queryKey: queryKeys.billing.balance(network),
     queryFn: () => api.get<BalanceRes>("/v1/billing/balance"),
   });
   const keys = useQuery({
-    queryKey: ["api-keys"],
+    queryKey: queryKeys.apiKeys.all,
     queryFn: () => api.get<KeysRes>("/v1/users/me/api-keys"),
   });
   const dwallets = useQuery({
-    queryKey: ["dwallets", network],
+    queryKey: queryKeys.dwallets.all(network),
     queryFn: () => api.get<DwalletsRes>("/v1/dwallets"),
   });
   const audit = useQuery({
-    queryKey: ["audit", { limit: 8 }],
+    queryKey: queryKeys.audit(8),
     queryFn: () =>
       api.get<{ events: AuditEvent[] }>("/v1/users/me/audit?limit=8"),
   });
@@ -442,7 +443,7 @@ function RecentDwallets({
                     curve {d.curve} · {d.kind}
                   </div>
                 </div>
-                <DStatus status={d.status} />
+                <DwalletStatus status={d.status} />
               </li>
             ))}
           </ul>
@@ -478,19 +479,6 @@ function RecentActivity({
       </div>
     </Tile>
   );
-}
-
-function DStatus({ status }: { status: string }) {
-  if (status === "Active") return <StatusPill tone="live">{status}</StatusPill>;
-  if (status === "AwaitingKeyHolderSignature")
-    return (
-      <StatusPill tone="warn" pulse>
-        awaiting share
-      </StatusPill>
-    );
-  if (status === "Failed")
-    return <StatusPill tone="danger">{status}</StatusPill>;
-  return <StatusPill tone="neutral">{status}</StatusPill>;
 }
 
 function ListSkeleton({ rows }: { rows: number }) {

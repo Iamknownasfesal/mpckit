@@ -6,14 +6,17 @@ import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { CodeWindow } from "@/components/dash/code-window";
+import { DwalletStatus } from "@/components/dash/dwallet-status";
 import { CopyMono, Mono } from "@/components/dash/mono";
 import { PageHeader } from "@/components/dash/page-header";
-import { StatusPill } from "@/components/dash/status-pill";
 import { Tile, TileBody, TileHeader } from "@/components/dash/tile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError, api } from "@/lib/api";
+import { CURVE_LABELS, curveLabel } from "@/lib/dwallet-curves";
+import { relativeDate } from "@/lib/format";
 import { suiscanTxUrl, useNetwork } from "@/lib/network";
+import { queryKeys } from "@/lib/query-keys";
 
 type DwalletRow = {
   id: string;
@@ -29,18 +32,11 @@ type DwalletRow = {
   updatedAt: string;
 };
 
-const CURVE_LABELS: Record<number, string> = {
-  0: "secp256k1",
-  1: "secp256r1",
-  2: "ed25519",
-  3: "ristretto",
-};
-
 export default function DwalletDetailPage() {
   const { id } = useParams<{ id: string }>();
   const network = useNetwork();
   const q = useQuery({
-    queryKey: ["dwallets", network, id],
+    queryKey: queryKeys.dwallets.byId(network, id),
     queryFn: () => api.get<{ dwallet: DwalletRow }>(`/v1/dwallets/${id}`),
     enabled: !!id,
     refetchInterval: (query) =>
@@ -79,7 +75,9 @@ export default function DwalletDetailPage() {
               </>
             ) : null
           }
-          right={q.data ? <DStatus status={q.data.dwallet.status} /> : null}
+          right={
+            q.data ? <DwalletStatus status={q.data.dwallet.status} /> : null
+          }
         />
       </div>
 
@@ -134,9 +132,7 @@ function DwalletDetail({ dwallet }: { dwallet: DwalletRow }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="t-kicker mb-1.5">Curve</div>
-                  <Mono>
-                    {CURVE_LABELS[dwallet.curve] ?? `curve-${dwallet.curve}`}
-                  </Mono>
+                  <Mono>{curveLabel(dwallet.curve)}</Mono>
                 </div>
                 <div>
                   <div className="t-kicker mb-1.5">Kind</div>
@@ -211,19 +207,6 @@ function Row({
   );
 }
 
-function DStatus({ status }: { status: string }) {
-  if (status === "Active") return <StatusPill tone="live">{status}</StatusPill>;
-  if (status === "AwaitingKeyHolderSignature")
-    return (
-      <StatusPill tone="warn" pulse>
-        awaiting share
-      </StatusPill>
-    );
-  if (status === "Failed")
-    return <StatusPill tone="danger">{status}</StatusPill>;
-  return <StatusPill tone="neutral">{status}</StatusPill>;
-}
-
 function TxLink({ digest }: { digest: string }) {
   const network = useNetwork();
   return (
@@ -242,16 +225,4 @@ function TxLink({ digest }: { digest: string }) {
 function shortId(id: string): string {
   if (id.length <= 18) return id;
   return `${id.slice(0, 12)}…${id.slice(-6)}`;
-}
-
-function relativeDate(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
 }

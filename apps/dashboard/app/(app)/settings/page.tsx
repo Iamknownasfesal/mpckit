@@ -36,7 +36,9 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { authClient, useSession } from "@/lib/auth-client";
+import { relativeDate } from "@/lib/format";
 import { identityDisplay } from "@/lib/identity";
+import { queryKeys } from "@/lib/query-keys";
 import { toastError } from "@/lib/toast";
 
 type PasskeyRow = {
@@ -250,7 +252,7 @@ function ProfileCard() {
 function PasskeysCard() {
   const qc = useQueryClient();
   const passkeys = useQuery({
-    queryKey: ["passkeys"],
+    queryKey: queryKeys.passkeys.all,
     queryFn: async () => {
       const res = await fetch("/api/auth/passkey/list-user-passkeys", {
         credentials: "include",
@@ -268,7 +270,7 @@ function PasskeysCard() {
     },
     onSuccess: () => {
       toast.success("Passkey added");
-      qc.invalidateQueries({ queryKey: ["passkeys"] });
+      qc.invalidateQueries({ queryKey: queryKeys.passkeys.all });
     },
     onError: (err) => toastError("Couldn't add passkey", err),
   });
@@ -281,7 +283,7 @@ function PasskeysCard() {
     },
     onSuccess: () => {
       toast.success("Passkey removed");
-      qc.invalidateQueries({ queryKey: ["passkeys"] });
+      qc.invalidateQueries({ queryKey: queryKeys.passkeys.all });
     },
     onError: (err) => toastError("Couldn't remove passkey", err),
   });
@@ -360,7 +362,7 @@ function SessionsCard() {
     null;
 
   const sessions = useQuery({
-    queryKey: ["sessions"],
+    queryKey: queryKeys.sessions.all,
     queryFn: async () => {
       const res = await fetch("/api/auth/list-sessions", {
         credentials: "include",
@@ -383,7 +385,7 @@ function SessionsCard() {
     },
     onSuccess: async (_data, token) => {
       const isMine = currentToken === token;
-      qc.invalidateQueries({ queryKey: ["sessions"] });
+      qc.invalidateQueries({ queryKey: queryKeys.sessions.all });
       if (isMine) {
         toast.success("Signed out", {
           description: "You revoked the session you were using.",
@@ -475,7 +477,7 @@ function SessionsCard() {
 
 function ActivityCard() {
   const audit = useQuery({
-    queryKey: ["audit", { limit: 100 }],
+    queryKey: queryKeys.audit(100),
     queryFn: () =>
       api.get<{ events: AuditEvent[] }>("/v1/users/me/audit?limit=100"),
   });
@@ -682,16 +684,4 @@ function summariseUA(ua: string | null): string {
   }
   if (/Linux/.test(ua)) return "Linux";
   return ua.slice(0, 40);
-}
-
-function relativeDate(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
 }
