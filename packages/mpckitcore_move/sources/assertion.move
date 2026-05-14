@@ -3,9 +3,10 @@
 /// `WebAuthnAssertion` carries a passkey signature and the data the
 /// authenticator signed. `verify_signature` checks the signature is
 /// valid over `authenticator_data || sha256(client_data_json)`
-/// (per WebAuthn §6.3.3) and that the JSON's `challenge` field equals
-/// the expected operation-bound challenge. Membership (this pubkey is
-/// in the authorized roster) is checked by the caller (`auth.move`).
+/// (per WebAuthn §6.3.3) and that the JSON contains the expected
+/// `challenge`, a literal `"type":"webauthn.get"`, and an `origin`
+/// matching `EXPECTED_ORIGIN`. Membership (this pubkey is in the
+/// authorized roster) is checked by the caller (`auth.move`).
 module mpckitcore::assertion;
 
 use std::hash;
@@ -13,9 +14,14 @@ use sui::ecdsa_r1;
 
 const ECDSA_R1_SHA256: u8 = 1;
 
+// Single hardcoded mainnet origin; testnet deploys patch this constant in their fork build.
+const EXPECTED_ORIGIN: vector<u8> = b"https://app.mpckit.xyz";
+
 const EAssertionInvalid: u64 = 2;
 const EChallengeMismatch: u64 = 3;
 const EBadChallengeLength: u64 = 4;
+const EBadType: u64 = 5;
+const EBadOrigin: u64 = 6;
 
 public struct WebAuthnAssertion has drop {
     public_key: vector<u8>,
@@ -61,12 +67,30 @@ public(package) fun verify_signature(self: &WebAuthnAssertion, expected_challeng
     );
     assert!(ok, EAssertionInvalid);
 
+    verify_client_data_json(&self.client_data_json, expected_challenge);
+}
+
+/// Enforce the WebAuthn §7.2 JSON-side policy checks: bound challenge,
+/// literal `type` of `webauthn.get`, and `origin` of `EXPECTED_ORIGIN`.
+public(package) fun verify_client_data_json(
+    client_data_json: &vector<u8>,
+    expected_challenge: &vector<u8>,
+) {
     let encoded = base64url_encode_32(expected_challenge);
-    let mut needle = vector::empty<u8>();
-    needle.append(b"\"challenge\":\"");
-    needle.append(encoded);
-    needle.push_back(34u8); // closing quote
-    assert!(contains_subvec(&self.client_data_json, &needle), EChallengeMismatch);
+    let mut challenge_needle = vector::empty<u8>();
+    challenge_needle.append(b"\"challenge\":\"");
+    challenge_needle.append(encoded);
+    challenge_needle.push_back(34u8); // closing quote
+    assert!(contains_subvec(client_data_json, &challenge_needle), EChallengeMismatch);
+
+    let type_needle = b"\"type\":\"webauthn.get\"";
+    assert!(contains_subvec(client_data_json, &type_needle), EBadType);
+
+    let mut origin_needle = vector::empty<u8>();
+    origin_needle.append(b"\"origin\":\"");
+    origin_needle.append(EXPECTED_ORIGIN);
+    origin_needle.push_back(34u8); // closing quote
+    assert!(contains_subvec(client_data_json, &origin_needle), EBadOrigin);
 }
 
 /// Encode a 32-byte input as 43-char unpadded base64url.
