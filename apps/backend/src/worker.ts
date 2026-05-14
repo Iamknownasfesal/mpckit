@@ -12,7 +12,7 @@ import { log } from "@/config/log";
 import { shutdownTelemetry } from "@/config/telemetry";
 import { registerBillingJobs } from "@/features/billing/jobs";
 import { registerPresignJobs } from "@/features/presigns/jobs";
-import { bucketHealth } from "@/features/presigns/service";
+import { bucketHealth, discover } from "@/features/presigns/service";
 import { registerSignJobs } from "@/features/sign/jobs";
 import { closeDb, isDbConfigured } from "@/shared/db/client";
 import { runMigrations } from "@/shared/db/migrate";
@@ -94,6 +94,24 @@ export async function startWorker(): Promise<void> {
   // deploy doesn't trip PRESIGN_POOL_EMPTY before the lazy refill fires.
   await warmupPresignPool();
 
+  // Boot reconcile: caps minted by older mpckitcore deployments or
+  // out-of-band operator scripts won't appear in the DB until
+  // discover() runs. Surface that drift immediately on boot so
+  // operators don't have to wait for the 15-min cron to catch up.
+  for (const network of networks) {
+    try {
+      const result = await discover(network);
+      if (result.inserted > 0 || result.failed > 0) {
+        log.info(
+          { network, ...result },
+          "presign warmup: discover reconciled drift",
+        );
+      }
+    } catch (err) {
+      log.warn({ err, network }, "presign warmup: discover failed");
+    }
+  }
+
   // Recurring jobs.
   await schedule(JOBS.presignSweepExpired, "*/1 * * * *", {
     olderThanSec: env.PRESIGN_RESERVATION_TTL_SEC,
@@ -104,6 +122,13 @@ export async function startWorker(): Promise<void> {
   await schedule(JOBS.billingSweepRetry, "*/10 * * * *", {
     olderThanSec: 600,
   });
+
+  // Steady-state reconciliation: scan operator-owned caps every 15
+  // minutes per enabled network so any drift since boot (manual mints,
+  // race losses between refill insert and PTB commit) heals itself.
+  for (const network of networks) {
+    await schedule(JOBS.presignDiscover, "*/15 * * * *", { network });
+  }
 
   log.info("mpckit worker ready");
 

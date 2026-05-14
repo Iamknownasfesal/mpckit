@@ -321,6 +321,159 @@ async function resolveSessionId(
 }
 
 // ---------------------------------------------------------------------------
+// Discovery
+// ---------------------------------------------------------------------------
+
+/**
+ * Page size for `listOwnedObjects`. The Sui gRPC server caps this at
+ * 50; going higher silently truncates.
+ */
+const DISCOVER_PAGE_SIZE = 50;
+
+/**
+ * Per-network minimum delay between cap-resolution RPCs. The public
+ * Mysten fullnode throttles aggressive sweepers, so we cap effective
+ * throughput at ~10 requests/sec while still finishing a 1k-cap pass
+ * in well under 30s.
+ */
+const DISCOVER_RPC_INTERVAL_MS = 100;
+
+/** Substring that identifies an `UnverifiedPresignCap` Move type tag. */
+const UNVERIFIED_PRESIGN_CAP_TYPE = "::coordinator_inner::UnverifiedPresignCap";
+
+export interface DiscoverResult {
+  scanned: number;
+  alreadyTracked: number;
+  inserted: number;
+  failed: number;
+}
+
+/**
+ * Scan the operator wallet for `UnverifiedPresignCap` objects and
+ * back-fill any whose row is missing from `presigns`. Handles caps
+ * created out-of-band (operator scripts, prior deployments) so the
+ * DB-tracked pool catches up with what the chain actually holds.
+ *
+ * Per-cap failures (RPC blips, unresolvable session, race losses) are
+ * counted as `failed` and retried on the next pass; one bad cap never
+ * sinks the whole sweep.
+ */
+export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
+  const operator = getTxExecutor(network).signerAddress();
+  const sui = getSuiClient(network);
+  const db = getDb();
+
+  // Pull every `UnverifiedPresignCap` owned by the operator. The
+  // optional `type` filter on `listOwnedObjects` requires the fully
+  // qualified type tag (package id + module + struct), which varies
+  // across mpckitcore deployments; filter client-side instead so caps
+  // minted by older packages still get reconciled.
+  const capObjectIds: string[] = [];
+  let cursor: string | null | undefined;
+  // Page until exhausted. First iteration uses an undefined cursor
+  // (start of list); subsequent iterations carry the server-returned
+  // cursor forward until `hasNextPage` flips false.
+  while (true) {
+    const page = await sui.core.listOwnedObjects({
+      owner: operator,
+      limit: DISCOVER_PAGE_SIZE,
+      cursor: cursor ?? null,
+    });
+    for (const obj of page.objects) {
+      if (obj.type.includes(UNVERIFIED_PRESIGN_CAP_TYPE)) {
+        capObjectIds.push(obj.objectId);
+      }
+    }
+    if (!page.hasNextPage) break;
+    cursor = page.cursor;
+    if (!cursor) break;
+  }
+
+  const scanned = capObjectIds.length;
+
+  // Pre-load the set of already-tracked cap ids in one shot. With ~1k
+  // caps this is a ~30KB result, far cheaper than 1k point lookups.
+  const tracked = scanned
+    ? await db
+        .select({ suiObjectId: presigns.suiObjectId })
+        .from(presigns)
+        .where(eq(presigns.network, network))
+    : [];
+  const trackedSet = new Set(tracked.map((r) => r.suiObjectId));
+
+  const untracked = capObjectIds.filter((id) => !trackedSet.has(id));
+  let alreadyTracked = scanned - untracked.length;
+  let inserted = 0;
+  let failed = 0;
+
+  if (untracked.length === 0) {
+    log.info(
+      { network, scanned, alreadyTracked, inserted, failed },
+      "presigns.discover: done",
+    );
+    return { scanned, alreadyTracked, inserted, failed };
+  }
+
+  const ika = await getIkaClient(network);
+  // Bind discovered rows to the operator's current network encryption
+  // key. The session itself may have been computed against an older
+  // NEK, but the SDK's sign path always resolves the active one at
+  // submission time, so storing the latest is consistent with how
+  // `refill` records new rows.
+  const networkEncryptionKeyId = (await ika.getLatestNetworkEncryptionKey()).id;
+
+  for (const capObjectId of untracked) {
+    try {
+      const sessionId = await resolveSessionId(network, capObjectId);
+      const presign = await ika.getPresign(sessionId);
+      const stateKind = presign.state.$kind;
+      const status: "pending" | "ready" =
+        stateKind === "Completed" ? "ready" : "pending";
+
+      const out = await db
+        .insert(presigns)
+        .values({
+          suiObjectId: capObjectId,
+          network,
+          curve: presign.curve,
+          signatureAlgorithm: presign.signature_algorithm,
+          networkEncryptionKeyId,
+          status,
+          requestTxDigest: null,
+        })
+        .onConflictDoNothing({ target: presigns.suiObjectId })
+        .returning({ id: presigns.id });
+
+      if (out.length === 0) {
+        // Another writer landed first (boot warmup + cron racing on a
+        // freshly-minted cap). Treat as already tracked.
+        alreadyTracked++;
+      } else {
+        inserted++;
+      }
+    } catch (err) {
+      // Resolvable next pass: presign session may not be observable yet,
+      // RPC may have hiccupped, etc. Don't write a `failed` row — that
+      // status is reserved for caps the coordinator explicitly rejected.
+      log.debug(
+        { err, suiObjectId: capObjectId, network },
+        "presigns.discover: skipping cap, will retry next pass",
+      );
+      failed++;
+    }
+    if (DISCOVER_RPC_INTERVAL_MS > 0) {
+      await new Promise((r) => setTimeout(r, DISCOVER_RPC_INTERVAL_MS));
+    }
+  }
+
+  log.info(
+    { network, scanned, alreadyTracked, inserted, failed },
+    "presigns.discover: done",
+  );
+  return { scanned, alreadyTracked, inserted, failed };
+}
+
+// ---------------------------------------------------------------------------
 // Sweep
 // ---------------------------------------------------------------------------
 
