@@ -19,6 +19,7 @@ import { env } from "@/config/env";
 import { log } from "@/config/log";
 import { AuthError, principalFor } from "@/http/middleware/auth";
 import { loggerFor } from "@/http/middleware/request-logger";
+import { clientIp } from "@/shared/http/client-ip";
 
 const AUTHED_POINTS = 60;
 const AUTHED_DURATION_SEC = 60;
@@ -99,14 +100,6 @@ function isRateLimiterRes(v: unknown): v is RateLimiterRes {
  */
 const SKIP_PATHS = new Set(["/v1/health", "/metrics"]);
 
-function clientIp(req: Request): string {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown"
-  );
-}
-
 function pathOf(req: Request): string {
   try {
     return new URL(req.url).pathname;
@@ -127,7 +120,7 @@ export const rateLimitMiddleware = new Elysia({ name: "rate-limit" }).onRequest(
       ? principal.apiKey
         ? `key:${principal.apiKey.id}`
         : `user:${principal.user.id}`
-      : `ip:${clientIp(request)}`;
+      : `ip:${clientIp(request) ?? "unknown"}`;
 
     try {
       const res = await limiter.consume(key, 1);

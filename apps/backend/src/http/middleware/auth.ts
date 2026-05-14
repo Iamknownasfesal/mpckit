@@ -24,6 +24,7 @@ import { loggerFor } from "@/http/middleware/request-logger";
 import { auditFireAndForget } from "@/shared/audit";
 import { getDb, isDbConfigured } from "@/shared/db/client";
 import { type ApiKey, apiKeys, type User, users } from "@/shared/db/schema";
+import { clientIp } from "@/shared/http/client-ip";
 import { hasNetwork } from "@/shared/networks/registry";
 
 export type AuthKind = "api_key" | "session";
@@ -201,17 +202,6 @@ async function resolveSession(request: Request): Promise<Principal | null> {
   const user = rows[0];
   if (!user) return null;
   return { user, apiKey: null, kind: "session" };
-}
-
-function clientIp(req: Request): string | null {
-  // Trust standard reverse-proxy headers when present. Operators that
-  // expose this directly to the internet should configure their LB to
-  // strip these on inbound requests.
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    null
-  );
 }
 
 export const authMiddleware = new Elysia({ name: "auth" }).onRequest(
