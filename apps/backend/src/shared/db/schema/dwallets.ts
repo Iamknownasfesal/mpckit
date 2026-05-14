@@ -37,6 +37,15 @@ export const dwallets = pgTable(
     curve: integer("curve").notNull(),
     /** Network encryption key the DKG ran against. */
     encryptionKeyId: text("encryption_key_id").notNull(),
+    /**
+     * On-chain Network Encryption Key id the dwallet is permanently
+     * bound to. Read from `dwallet.dwallet_network_encryption_key_id`
+     * on chain when the dwallet activates; lazy-backfilled for older
+     * rows via `ensureDwalletNek`. Sign-time presign allocation must
+     * match this NEK exactly — coordinator's
+     * `validate_and_initiate_sign` aborts otherwise.
+     */
+    networkEncryptionKeyId: text("network_encryption_key_id"),
     /** zero_trust | shared. */
     kind: text("kind").notNull().default("zero_trust"),
     /** awaiting_user_share | active | failed. */
@@ -56,6 +65,10 @@ export const dwallets = pgTable(
     userIdx: index("dwallets_user_idx").on(t.userId),
     userNetworkIdx: index("dwallets_user_network_idx").on(t.userId, t.network),
     accountIdx: index("dwallets_account_idx").on(t.accountId),
+    networkNekIdx: index("dwallets_network_nek_idx").on(
+      t.network,
+      t.networkEncryptionKeyId,
+    ),
     dwalletUnique: uniqueIndex("dwallets_sui_dwallet_unique").on(
       t.suiDwalletId,
     ),

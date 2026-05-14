@@ -236,16 +236,67 @@ export async function acceptUserShare(
 
   const executed = await getTxExecutor(args.network).execute(tx);
 
+  // Persist the on-chain NEK now that the dwallet is finalising. This
+  // is the canonical NEK the coordinator binds the dwallet to (per
+  // `coordinator_inner::DWallet.dwallet_network_encryption_key_id`),
+  // and presign allocation at sign time MUST match it. Reading it here
+  // avoids a chain round-trip on every sign.
+  let nekId: string | null = null;
+  try {
+    const fresh = await ika.getDWallet(dw.suiDwalletId);
+    nekId = fresh.dwallet_network_encryption_key_id ?? null;
+  } catch (_err) {
+    // Non-fatal: `ensureDwalletNek` will lazy-backfill on first sign.
+  }
+
   const updated = await db
     .update(dwallets)
     .set({
       status: "active",
       acceptTxDigest: executed.digest,
+      ...(nekId ? { networkEncryptionKeyId: nekId } : {}),
       updatedAt: new Date(),
     })
     .where(eq(dwallets.id, dw.id))
     .returning();
   return updated[0]!;
+}
+
+/**
+ * Return the canonical on-chain NEK id for `dwalletId`, backfilling
+ * the `dwallets.network_encryption_key_id` column on the row if it's
+ * still null. Existing rows predate the schema change; one chain
+ * round-trip on the first sign converts them to the steady state.
+ * Throws if the row doesn't exist or the chain read fails.
+ */
+export async function ensureDwalletNek(
+  dwalletId: string,
+  network: Network,
+): Promise<string> {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(dwallets)
+    .where(eq(dwallets.id, dwalletId))
+    .limit(1);
+  const dw = rows[0];
+  if (!dw) throw errors.notFound("dwallet not found", "DWALLET_NOT_FOUND");
+  if (dw.networkEncryptionKeyId) return dw.networkEncryptionKeyId;
+
+  const ika = await getIkaClient(network);
+  const fresh = await ika.getDWallet(dw.suiDwalletId);
+  const nekId = fresh.dwallet_network_encryption_key_id;
+  if (!nekId) {
+    throw errors.internal(
+      "dwallet on chain has no network_encryption_key_id",
+      "DWALLET_NEK_MISSING",
+    );
+  }
+  await db
+    .update(dwallets)
+    .set({ networkEncryptionKeyId: nekId, updatedAt: new Date() })
+    .where(eq(dwallets.id, dw.id));
+  return nekId;
 }
 
 export async function listDwalletsForUser(
