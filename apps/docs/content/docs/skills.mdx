@@ -1,0 +1,115 @@
+---
+title: Claude Code skill
+description: An installable agent skill that teaches Claude Code, Cursor, Codex, and other coding agents how to build against the MPCKit SDKs end-to-end.
+---
+
+The MPCKit repo ships an [open agent skill](https://skills.sh) at
+`skills/mpckit`. Install it into your coding agent and it will read the
+SDK surface, the onboard-sign flow, and the error taxonomy directly
+into the agent's context the moment you ask it to integrate MPCKit.
+
+Skills are how you give an agent durable, procedural knowledge about a
+library without re-pasting docs into every prompt. The skill loader
+([`skills.sh`](https://skills.sh)) is open source at
+[`vercel-labs/skills`](https://github.com/vercel-labs/skills) and
+supports Claude Code, Cursor, Codex, OpenCode, Cline, and 50 other
+agents.
+
+## Install
+
+In any project where you use a coding agent:
+
+```bash
+npx skills add Iamknownasfesal/mpckit --skill mpckit
+```
+
+The loader detects which agents you have configured (Claude Code, Cursor,
+etc.) and installs the skill for each. To target one explicitly:
+
+```bash
+npx skills add Iamknownasfesal/mpckit --skill mpckit -a claude-code
+```
+
+To install once for your user account, available in every project:
+
+```bash
+npx skills add Iamknownasfesal/mpckit --skill mpckit -g
+```
+
+You can also point the loader directly at the skill's tree URL, which
+is useful in CI where you do not want to depend on the loader's project
+resolution:
+
+```bash
+npx skills add https://github.com/Iamknownasfesal/mpckit/tree/main/skills/mpckit
+```
+
+## What the agent learns
+
+The skill is a hub (`SKILL.md`) plus five reference files. The hub is
+always in context once the skill is matched; reference files are read on
+demand only when the task touches them.
+
+<Cards>
+  <Card title="TypeScript reference" href="https://github.com/Iamknownasfesal/mpckit/blob/main/skills/mpckit/references/typescript.md" description="@mpckit/sdk full surface: MPCKit class, onboard, sign, billing, introspection, crypto engines, the raw HTTP escape hatch." />
+  <Card title="React reference" href="https://github.com/Iamknownasfesal/mpckit/blob/main/skills/mpckit/references/react.md" description="MPCKitProvider plus all 10 hooks, worker setup by bundler, SSR notes, and the typed query key factory." />
+  <Card title="Rust reference" href="https://github.com/Iamknownasfesal/mpckit/blob/main/skills/mpckit/references/rust.md" description="mpckit crate builder, async surface, default vs the `crypto` feature, two-phase sign." />
+  <Card title="Flows" href="https://github.com/Iamknownasfesal/mpckit/blob/main/skills/mpckit/references/flows.md" description="Cold-start-to-signed-message recipes, the passkey-PRF seed pattern, idempotent retries, broadcasting per chain." />
+  <Card title="Errors" href="https://github.com/Iamknownasfesal/mpckit/blob/main/skills/mpckit/references/errors.md" description="MPCKitError taxonomy, error codes, retry policy, production logging." />
+</Cards>
+
+## When the agent invokes it
+
+The skill's frontmatter description lists the triggers. In short, any
+task that mentions:
+
+- `@mpckit/sdk`, `@mpckit/react`, or the `mpckit` Rust crate.
+- The `MPCKit` class, `MPCKit::builder`, `MPCKitProvider`, or any of the
+  hooks (`useMPCKit`, `useOnboard`, `useSign`, `useDWallets`, ...).
+- dWallet onboarding or signing.
+- The `api.mpckit.xyz` or `api.testnet.mpckit.xyz` endpoints.
+
+When matched, the agent has the SDK surface, the network hosts, the
+API-key prefix conventions, the valid (curve, signature algorithm, hash
+scheme) combinations, and the common-mistake table at hand without any
+extra prompting from you.
+
+## Compatibility
+
+| Agent | Status |
+|---|---|
+| Claude Code | tested in CI |
+| Cursor | tested in CI |
+| Codex | tested in CI |
+| OpenCode, Cline, Gemini, Copilot, Windsurf, +50 more | supported via [`skills.sh`](https://skills.sh) loader |
+
+The skill is plain Markdown with YAML frontmatter; nothing about it is
+agent-specific.
+
+## Authoring your own
+
+If you fork MPCKit or run a self-hosted backend with a divergent surface,
+you can fork the skill in place:
+
+1. Edit `skills/mpckit/SKILL.md` and the matching `references/*.md`.
+2. Bump `metadata.json:version` to match your SDK minor.
+3. Install from your fork: `npx skills add yourorg/yourfork --skill mpckit`.
+
+The skill source is the authoritative document for the agent; keep it in
+lockstep with the SDK packages under `packages/sdk-ts`, `packages/sdk-react`,
+and `packages/sdk-rust`.
+
+## Why not just point the agent at this docs site?
+
+Two reasons.
+
+1. **Triggers and budget.** The skill loader puts the hub into context
+   exactly when the agent's task matches the description, and only loads
+   reference files on demand. Pasting the entire docs site into every
+   prompt is wasteful and noisy.
+2. **Procedural knowledge.** This page tells you *what MPCKit is*. The
+   skill tells the agent *how to use MPCKit*, with conventions, common
+   mistakes, the install commands, and a build-verification checklist
+   that are aimed at code generation, not at humans reading prose.
+
+The two are complementary. Humans read the docs; agents load the skill.

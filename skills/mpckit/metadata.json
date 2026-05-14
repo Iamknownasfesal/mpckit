@@ -1,0 +1,9 @@
+{
+  "name": "mpckit",
+  "version": "0.3.0",
+  "author": "mpckit",
+  "license": "MIT",
+  "homepage": "https://docs.mpckit.xyz",
+  "repository": "https://github.com/Iamknownasfesal/mpckit",
+  "description": "Build with the MPCKit SDKs across TypeScript, React, and Rust. Covers @mpckit/sdk, @mpckit/react, and the mpckit Rust crate: onboarding dWallets, signing across chains, billing, and introspection."
+}
