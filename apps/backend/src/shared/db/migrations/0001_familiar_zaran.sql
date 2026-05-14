@@ -1,0 +1,1 @@
+ALTER TABLE "presigns" ALTER COLUMN "request_tx_digest" DROP NOT NULL;

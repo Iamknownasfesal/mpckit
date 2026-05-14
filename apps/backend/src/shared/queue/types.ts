@@ -13,6 +13,7 @@ import type { IkaNetwork } from "@/config/env";
 export const JOBS = {
   presignRefill: "presigns.refill",
   presignSweepExpired: "presigns.sweep-expired",
+  presignDiscover: "presigns.discover",
   signProcess: "sign.process",
   signSweepPrepared: "sign.sweep-prepared",
   billingSweep: "billing.sweep",
@@ -33,6 +34,11 @@ export interface PresignRefillPayload {
 export interface PresignSweepExpiredPayload {
   /** Reservations older than this in seconds get rolled back to `ready`. */
   olderThanSec: number;
+}
+
+export interface PresignDiscoverPayload {
+  /** Sui network whose operator wallet to scan. */
+  network: IkaNetwork;
 }
 
 export interface SignProcessPayload {
@@ -74,12 +80,14 @@ export type PayloadFor<N extends JobName> = N extends typeof JOBS.presignRefill
   ? PresignRefillPayload
   : N extends typeof JOBS.presignSweepExpired
     ? PresignSweepExpiredPayload
-    : N extends typeof JOBS.signProcess
-      ? SignProcessPayload
-      : N extends typeof JOBS.signSweepPrepared
-        ? SignSweepPreparedPayload
-        : N extends typeof JOBS.billingSweep
-          ? BillingSweepPayload
-          : N extends typeof JOBS.billingSweepRetry
-            ? BillingSweepRetryPayload
-            : never;
+    : N extends typeof JOBS.presignDiscover
+      ? PresignDiscoverPayload
+      : N extends typeof JOBS.signProcess
+        ? SignProcessPayload
+        : N extends typeof JOBS.signSweepPrepared
+          ? SignSweepPreparedPayload
+          : N extends typeof JOBS.billingSweep
+            ? BillingSweepPayload
+            : N extends typeof JOBS.billingSweepRetry
+              ? BillingSweepRetryPayload
+              : never;

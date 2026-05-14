@@ -40,8 +40,12 @@ export const presigns = pgTable(
     /** Network encryption key the presign is bound to. */
     networkEncryptionKeyId: text("network_encryption_key_id").notNull(),
     status: text("status").notNull().default("pending"),
-    /** Tx digest of the batch that minted this presign. */
-    requestTxDigest: text("request_tx_digest").notNull(),
+    /**
+     * Tx digest of the batch that minted this presign. Nullable so that
+     * rows back-filled from chain-side scans (origin tx unknown) can be
+     * tracked without losing audit info for refill-originated rows.
+     */
+    requestTxDigest: text("request_tx_digest"),
     /** Sign request that consumed it. */
     signRequestId: uuid("sign_request_id"),
     allocatedAt: timestamp("allocated_at", { withTimezone: true }),

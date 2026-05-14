@@ -6,9 +6,14 @@
  *   `presigns.sweep-expired`  rolls back stale `allocated` /
  *                             `consumed_pending` rows + promotes
  *                             ready-on-chain `pending` rows to `ready`
+ *   `presigns.discover`       reconciles operator-owned caps on chain
+ *                             into the DB so out-of-band mints (older
+ *                             deployments, manual scripts) replenish
+ *                             the pool instead of orphaning
  */
 import { log } from "@/config/log";
 import {
+  discover,
   promotePending,
   refill,
   sweepExpired,
@@ -49,5 +54,9 @@ export async function registerPresignJobs(): Promise<void> {
         "presigns.sweep-expired: done",
       );
     }
+  });
+
+  await registerHandler(JOBS.presignDiscover, async (payload) => {
+    await discover(payload.network);
   });
 }

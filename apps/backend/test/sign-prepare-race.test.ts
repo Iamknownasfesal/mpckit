@@ -14,16 +14,37 @@
  * This file mocks every external dependency `service.ts` pulls in so it
  * stays a pure unit test (no Postgres, no Sui, no Ika).
  */
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  spyOn,
+  test,
+} from "bun:test";
 
-// Only mock things `prepareSignRequest` actually touches at runtime, and
-// keep mocks compatible with other test files in this process. Bun's
-// `mock.module` is process-global and persists across files, so any
-// over-aggressive stub here would corrupt downstream tests
-// (move-calls.test.ts, tx-executor-gas-station.test.ts, smoke.test.ts).
+// Only mock things `prepareSignRequest` actually touches at runtime,
+// and keep mocks compatible with other test files in this process.
+// Bun's `mock.module` is process-global, persists across files, and is
+// NOT undone by `mock.restore()` in 1.3.x (verified empirically), so
+// any over-aggressive `mock.module` stub here would corrupt downstream
+// tests (move-calls, tx-executor-gas-station, billing/refund, etc.).
+// The pure config-layer mocks below (env, log, queue/client) are safe
+// because they expose the full surface other files expect; for the
+// heavier `@/features/billing/service` and `@/features/presigns/service`
+// patches we use per-function `spyOn`+`mockRestore` further down, which
+// can be torn down in `afterAll`.
 const envMock: Record<string, unknown> = {
   LOG_LEVEL: "silent",
   PRESIGN_BATCH_SIZE: 10,
+  // Match `SIGN_PRICE` below so the real `OP_PRICES.sign`, captured by
+  // sign service at module-load time, evaluates to 1000n. Lets us spy
+  // on charge/refund instead of swapping the whole billing module.
+  BILLING_PRICE_SIGN_MICRO: 1000n,
+  BILLING_PRICE_DKG_MICRO: 1n,
+  BILLING_PRICE_ENCRYPTION_KEY_MICRO: 1n,
 };
 mock.module("@/config/env", () => ({
   env: envMock,
@@ -68,55 +89,70 @@ async function withBalanceLock<T>(fn: () => Promise<T> | T): Promise<T> {
   return fn();
 }
 
-const billingMock = {
-  OP_PRICES: { sign: SIGN_PRICE },
-  charge: mock(
-    async (args: {
-      userId: string;
-      network: string;
-      opType: string;
-      opId: string;
-      amountMicro: bigint;
-      reason?: string;
-    }) => {
-      return withBalanceLock(() => {
-        const key = `${args.network}:${args.opType}:${args.opId}:charge`;
-        const existing = charges.get(key);
-        if (existing !== undefined) return { id: key };
-        if (balance < args.amountMicro) {
-          const err = new (class extends Error {
-            status = 402;
-            code = "INSUFFICIENT_CREDITS";
-          })(`insufficient credits: have ${balance}, need ${args.amountMicro}`);
-          throw err;
-        }
-        balance -= args.amountMicro;
-        charges.set(key, args.amountMicro);
-        return { id: key };
-      });
-    },
-  ),
-  refund: mock(
-    async (args: {
-      userId: string;
-      network: string;
-      opType: string;
-      opId: string;
-      amountMicro: bigint;
-      reason: string;
-    }) => {
-      return withBalanceLock(() => {
-        const key = `${args.network}:${args.opType}:${args.opId}:refund`;
-        if (charges.has(key)) return { id: key };
-        balance += args.amountMicro;
-        charges.set(key, args.amountMicro);
-        return { id: key };
-      });
-    },
-  ),
-};
+// `charge` / `refund` implementations the test will install via spies
+// below. Plain `mock(...)` wrappers keep `.toHaveBeenCalledTimes` and
+// `mockClear()` working the same as before.
+const chargeImpl = mock(
+  async (args: {
+    userId: string;
+    network: string;
+    opType: string;
+    opId: string;
+    amountMicro: bigint;
+    reason?: string;
+  }) => {
+    return withBalanceLock(() => {
+      const key = `${args.network}:${args.opType}:${args.opId}:charge`;
+      const existing = charges.get(key);
+      if (existing !== undefined) return { id: key };
+      if (balance < args.amountMicro) {
+        const err = new (class extends Error {
+          status = 402;
+          code = "INSUFFICIENT_CREDITS";
+        })(`insufficient credits: have ${balance}, need ${args.amountMicro}`);
+        throw err;
+      }
+      balance -= args.amountMicro;
+      charges.set(key, args.amountMicro);
+      return { id: key };
+    });
+  },
+);
 
-mock.module("@/features/billing/service", () => billingMock);
+const refundImpl = mock(
+  async (args: {
+    userId: string;
+    network: string;
+    opType: string;
+    opId: string;
+    amountMicro: bigint;
+    reason: string;
+  }) => {
+    return withBalanceLock(() => {
+      const key = `${args.network}:${args.opType}:${args.opId}:refund`;
+      if (charges.has(key)) return { id: key };
+      balance += args.amountMicro;
+      charges.set(key, args.amountMicro);
+      return { id: key };
+    });
+  },
+);
+
+// Patch the REAL `@/features/billing/service` module via `spyOn` so
+// only `charge` and `refund` are swapped, and so the spies can be
+// torn down in `afterAll` (Bun's `mock.module` has no per-file scope
+// and is not undone by `mock.restore()` in 1.3.x, which is why
+// previous attempts here leaked into refund/charge-with-refund tests).
+const realBilling = await import("@/features/billing/service");
+const chargeSpy = spyOn(realBilling, "charge").mockImplementation(
+  chargeImpl as typeof realBilling.charge,
+);
+const refundSpy = spyOn(realBilling, "refund").mockImplementation(
+  refundImpl as typeof realBilling.refund,
+);
+// Re-expose the underlying mock counters under the old name for the
+// existing test assertions.
+const billingMock = { charge: chargeImpl, refund: refundImpl };
 
 // Minimal DB stub. Backs the four touch points `prepareSignRequest`
 // needs (idempotency select, dwallet select, signRequests insert/
@@ -254,7 +290,7 @@ mock.module("@/shared/db/client", () => ({
 let allocateCalls = 0;
 let allocateInventory = 1; // single ready presign by default
 
-const allocateMock = mock(
+const allocateImpl = mock(
   async (_args: {
     network: string;
     curve: number;
@@ -272,12 +308,13 @@ const allocateMock = mock(
   },
 );
 
-mock.module("@/features/presigns/service", () => ({
-  allocate: allocateMock,
-  markConsumedPending: async () => undefined,
-  markUsed: async () => undefined,
-  rollbackToReady: async () => undefined,
-}));
+// Same reasoning as the billing spies above: swap only `allocate`
+// via `spyOn` so the swap can be undone in `afterAll`.
+const realPresigns = await import("@/features/presigns/service");
+const allocateSpy = spyOn(realPresigns, "allocate").mockImplementation(
+  allocateImpl as typeof realPresigns.allocate,
+);
+const allocateMock = allocateImpl;
 
 // Now import the service AFTER all mocks are wired.
 const { prepareSignRequest } = await import("@/features/sign/service");
@@ -327,6 +364,19 @@ describe("prepareSignRequest M2: charge before allocate", () => {
 
   afterEach(() => {
     resetState();
+  });
+
+  afterAll(() => {
+    // Per-spy restoration is the ONLY thing that actually un-installs
+    // these stubs in Bun 1.3.x. `mock.module` is process-global and
+    // not undone by `mock.restore()`; we use spies instead so sibling
+    // files (billing/refund, charge-with-refund, etc.) see the real
+    // `@/features/billing/service` and `@/features/presigns/service`
+    // exports once this file finishes.
+    chargeSpy.mockRestore();
+    refundSpy.mockRestore();
+    allocateSpy.mockRestore();
+    mock.restore();
   });
 
   test("concurrent prepares at balance == 1*price: only the winner reaches allocate", async () => {

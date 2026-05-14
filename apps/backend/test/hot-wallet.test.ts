@@ -44,7 +44,12 @@ mock.module("@aws-sdk/client-kms", () => ({
 }));
 
 mock.module("@/config/log", () => ({
-  log: { info: () => undefined, warn: () => undefined, error: () => undefined },
+  log: {
+    debug: () => undefined,
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  },
 }));
 
 const envMock: Record<string, unknown> = {};

@@ -11,7 +11,7 @@
  * fake counts `transaction()` calls so we can make the first
  * (`charge`) succeed and the second (`refund`) throw.
  */
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 // Silence the real pino transport; the test spies on `log.error` via
 // the mocked module below.
@@ -99,6 +99,17 @@ function makeBuilder(rows: unknown[]) {
   b.orderBy = chain;
   b.limit = () => Promise.resolve(rows);
   b.returning = () => Promise.resolve(rows);
+  // Drizzle query builders are thenable, so chains that omit a
+  // terminal `.limit()` / `.returning()` (e.g. `await tx.select(...)
+  // .from(...).where(...)`) still resolve to the row set. The newer
+  // refund clamp uses this shape; without `then`, the await would
+  // resolve to the builder object itself and `for (const row of ...)`
+  // would throw "not iterable" mid-transaction.
+  // biome-ignore lint/suspicious/noThenProperty: drizzle query chains are intentionally thenable.
+  b.then = (
+    onFul: (v: unknown[]) => unknown,
+    onRej?: (e: unknown) => unknown,
+  ) => Promise.resolve(rows).then(onFul, onRej);
   return b;
 }
 
@@ -119,19 +130,35 @@ const fakeTx = {
   // chainable builder; tweak its `limit` resolution per call.
 };
 
-// Override fakeTx.select so the account `for update` query returns the
-// account, but the dedupe lookup returns []. We dispatch by inspecting
-// which call comes first: the dedupe `select` runs before the account
-// `for update` select inside `charge`/`refund`.
+// Drive the in-transaction `select` mock by call sequence so it
+// matches what `charge` and `refund` actually issue.
+//
+// `charge` issues 2 selects:
+//   1. dedupe (existing charge row by op?) -> []
+//   2. account row `for update`            -> [{creditsMicro: ...}]
+//
+// `refund` (post audit fix L2) issues 3 selects:
+//   3. dedupe (existing refund row by op?) -> []
+//   4. matching charge rows for the op     -> [{creditsMicro: -100n}]
+//   5. prior refund rows for the op        -> []
 let txSelectCallNo = 0;
 fakeTx.select = () => {
   txSelectCallNo += 1;
-  if (txSelectCallNo % 2 === 1) {
-    // Dedupe lookup -> no existing row.
-    return makeBuilder([]);
+  switch (txSelectCallNo) {
+    case 1:
+    case 3:
+    case 5:
+      return makeBuilder([]);
+    case 2:
+      return makeBuilder([{ creditsMicro: FAKE_ACCOUNT.creditsMicro }]);
+    case 4:
+      // Sum-matching-charges lookup. The refund clamp expects rows
+      // with negative `creditsMicro` (charge deltas) so it can take
+      // the abs value and confirm the refund fits inside it.
+      return makeBuilder([{ creditsMicro: -100n }]);
+    default:
+      return makeBuilder([]);
   }
-  // Account `for update` lookup -> the account row.
-  return makeBuilder([{ creditsMicro: FAKE_ACCOUNT.creditsMicro }]);
 };
 
 const fakeDb = {
@@ -203,6 +230,14 @@ describe("chargeWithRefund happy path", () => {
     state.refundTransactionShouldThrow = false;
     txSelectCallNo = 0;
     logSpy.error.mockClear();
+  });
+
+  afterAll(() => {
+    // Clears function-level mocks (logSpy.* counters, etc.). Module
+    // mocks installed via `mock.module` are not undone by this in Bun
+    // 1.3.x; we rely on the stubs above being full-surface so they
+    // stay forward-compatible if a future test file is added after.
+    mock.restore();
   });
 
   test("returns fn() result and never enters refund branch", async () => {

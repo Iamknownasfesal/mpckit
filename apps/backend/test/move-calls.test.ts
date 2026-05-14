@@ -82,7 +82,12 @@ const envMock: Record<string, unknown> = {
 };
 mock.module("@/config/env", () => ({ env: envMock }));
 mock.module("@/config/log", () => ({
-  log: { info: () => undefined, warn: () => undefined, error: () => undefined },
+  log: {
+    debug: () => undefined,
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  },
 }));
 
 const {
