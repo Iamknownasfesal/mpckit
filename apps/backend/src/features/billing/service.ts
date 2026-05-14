@@ -1,11 +1,13 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { env, type IkaNetwork } from "@/config/env";
+import { log } from "@/config/log";
 import {
   creditsFor,
   type VerifiedDeposit,
   verifyDeposit,
 } from "@/features/billing/verifier";
 import { deriveDepositAddress } from "@/shared/billing/derive";
+import { billingRefundFailed } from "@/shared/cache/metrics";
 import { getDb } from "@/shared/db/client";
 import {
   type BillingCharge,
@@ -361,14 +363,33 @@ export async function chargeWithRefund<T>(
   try {
     return await fn();
   } catch (err) {
-    await refund({
-      userId: args.userId,
-      network: args.network,
-      opType: args.opType,
-      opId,
-      amountMicro: args.amountMicro,
-      reason: args.refundReason(err).slice(0, 200),
-    });
+    try {
+      await refund({
+        userId: args.userId,
+        network: args.network,
+        opType: args.opType,
+        opId,
+        amountMicro: args.amountMicro,
+        reason: args.refundReason(err).slice(0, 200),
+      });
+    } catch (refundErr) {
+      billingRefundFailed.inc({
+        network: args.network,
+        opType: args.opType,
+      });
+      log.error(
+        {
+          userId: args.userId,
+          network: args.network,
+          opType: args.opType,
+          opId,
+          amountMicro: args.amountMicro.toString(),
+          originalErr: err,
+          refundErr,
+        },
+        "chargeWithRefund: refund failed after fn() threw; user charged with no credit returned",
+      );
+    }
     throw err;
   }
 }
