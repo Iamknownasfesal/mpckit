@@ -342,12 +342,13 @@ const DISCOVER_RPC_INTERVAL_MS = 100;
 const UNVERIFIED_PRESIGN_CAP_TYPE = "::coordinator_inner::UnverifiedPresignCap";
 
 /**
- * Substring that identifies a `PresignRequestEvent` emitted by the
- * coordinator at the time the upstream `PresignSession` is created.
- * Carries the NEK id, curve, and signature algorithm the cap is bound
- * to; neither the cap nor the session expose them as on-chain fields.
+ * Move field name (as raw bytes) the coordinator attaches to a
+ * `PresignSession` via `dynamic_field::add(..., b"dwallet_network_encryption_key_id", id)`.
+ * Reading this back is the canonical way to get the NEK a presign is
+ * bound to: `validate_and_initiate_sign` removes the same field and
+ * asserts it matches the dwallet's NEK at sign time.
  */
-const PRESIGN_REQUEST_EVENT_TYPE = "::coordinator_inner::PresignRequestEvent";
+const NEK_DYNAMIC_FIELD_NAME = "dwallet_network_encryption_key_id";
 
 export interface DiscoverResult {
   scanned: number;
@@ -356,23 +357,19 @@ export interface DiscoverResult {
   failed: number;
 }
 
-/**
- * Parsed shape of a `PresignRequestEvent`. The coordinator wraps it in
- * `sessions_manager::DWalletSessionEvent`, so the interesting fields
- * live under `event_data`.
- */
-interface PresignRequestEventData {
-  presign_id: string;
-  dwallet_network_encryption_key_id: string;
-  curve: number;
-  signature_algorithm: number;
+/** Shape we need from `PresignSession` content JSON for reconciliation. */
+interface PresignSessionJson {
+  id?: { id?: string } | string;
+  curve?: number;
+  signature_algorithm?: number;
 }
 
-/** Resolved per-cap metadata pulled from a `PresignRequestEvent`. */
-interface CapMintInfo {
-  networkEncryptionKeyId: string;
+/** Resolved per-cap metadata read straight off the chain. */
+interface CapInfo {
+  presignId: string;
   curve: number;
   signatureAlgorithm: number;
+  networkEncryptionKeyId: string;
 }
 
 /**
@@ -381,15 +378,16 @@ interface CapMintInfo {
  * created out-of-band (operator scripts, prior deployments) so the
  * DB-tracked pool catches up with what the chain actually holds.
  *
- * For each cap we resolve the NEK, curve, and signature algorithm from
- * the `PresignRequestEvent` emitted by the cap's mint transaction.
- * Caps minted under a prior NEK epoch must keep their original NEK,
- * otherwise `verify_presign_cap` rejects them on first use. The mint
- * tx digest is the cap object's `previousTransaction`, and one mint
- * tx can produce many caps, so we fetch each unique tx exactly once
- * per discover pass and cache the parsed events.
+ * For each cap we resolve `(curve, signatureAlgorithm, NEK)` straight
+ * off chain:
+ *   - presign_id comes from the cap object's content fields,
+ *   - curve + signature_algorithm come from the `PresignSession`
+ *     regular fields (batched 50/req),
+ *   - NEK comes from the `PresignSession`'s
+ *     `b"dwallet_network_encryption_key_id"` dynamic field, which is
+ *     the same source `validate_and_initiate_sign` reads at sign time.
  *
- * Per-cap failures (RPC blips, missing event match) are counted as
+ * Per-cap failures (RPC blips, missing dynamic field) are counted as
  * `failed` and retried on the next pass; one bad cap never sinks the
  * whole sweep.
  */
@@ -403,25 +401,17 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
   // qualified type tag (package id + module + struct), which varies
   // across mpckitcore deployments; filter client-side instead so caps
   // minted by older packages still get reconciled.
-  //
-  // We also request `previousTransaction` so we know which mint tx to
-  // pull events from. The gRPC server already populates this field in
-  // the same response, so no extra round trip is needed.
-  const capRefs: Array<{ objectId: string; previousTransaction?: string }> = [];
+  const capIds: string[] = [];
   let cursor: string | null | undefined;
   while (true) {
     const page = await sui.core.listOwnedObjects({
       owner: operator,
       limit: DISCOVER_PAGE_SIZE,
       cursor: cursor ?? null,
-      include: { previousTransaction: true },
     });
     for (const obj of page.objects) {
       if (obj.type.includes(UNVERIFIED_PRESIGN_CAP_TYPE)) {
-        capRefs.push({
-          objectId: obj.objectId,
-          previousTransaction: obj.previousTransaction ?? undefined,
-        });
+        capIds.push(obj.objectId);
       }
     }
     if (!page.hasNextPage) break;
@@ -429,7 +419,7 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
     if (!cursor) break;
   }
 
-  const scanned = capRefs.length;
+  const scanned = capIds.length;
 
   // Pre-load the set of already-tracked cap ids in one shot. With ~1k
   // caps this is a ~30KB result, far cheaper than 1k point lookups.
@@ -441,12 +431,12 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
     : [];
   const trackedSet = new Set(tracked.map((r) => r.suiObjectId));
 
-  const untracked = capRefs.filter((c) => !trackedSet.has(c.objectId));
-  let alreadyTracked = scanned - untracked.length;
+  const untrackedCapIds = capIds.filter((id) => !trackedSet.has(id));
+  let alreadyTracked = scanned - untrackedCapIds.length;
   let inserted = 0;
   let failed = 0;
 
-  if (untracked.length === 0) {
+  if (untrackedCapIds.length === 0) {
     log.info(
       { network, scanned, alreadyTracked, inserted, failed },
       "presigns.discover: done",
@@ -454,35 +444,121 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
     return { scanned, alreadyTracked, inserted, failed };
   }
 
-  // Resolve each unique mint tx exactly once, parse a presign_id-keyed
-  // event map, and reuse for every cap that shares the digest. A batch
-  // of 10 caps per mint tx means ~10x fewer tx fetches on busy operators.
-  const sessionCache = await loadCapMintInfo(network, untracked);
-
-  for (const cap of untracked) {
+  // Batch the cap-content fetch by 50 (the gRPC server's `getObjects`
+  // limit) so we collect `presign_id` for every untracked cap in a
+  // small number of round trips. Caps whose content can't be fetched
+  // are dropped here and counted as failed below.
+  const capPresignId = new Map<string, string>();
+  const failedCapIds = new Set<string>();
+  for (let i = 0; i < untrackedCapIds.length; i += DISCOVER_PAGE_SIZE) {
+    const batch = untrackedCapIds.slice(i, i + DISCOVER_PAGE_SIZE);
     try {
-      const sessionId = await resolveSessionId(network, cap.objectId);
-      const info = sessionCache.get(sessionId);
-      if (!info) {
-        // No matching mint-tx event found; retry next pass rather than
-        // bind the row to the wrong NEK.
+      const got = await sui.core.getObjects({
+        objectIds: batch,
+        include: { json: true },
+      });
+      for (let j = 0; j < batch.length; j++) {
+        const capId = batch[j]!;
+        const obj = got.objects?.[j];
+        if (!obj || obj instanceof Error) {
+          failedCapIds.add(capId);
+          continue;
+        }
+        const presignId = (obj.json as { presign_id?: string } | null)
+          ?.presign_id;
+        if (!presignId) {
+          failedCapIds.add(capId);
+          continue;
+        }
+        capPresignId.set(capId, presignId);
+      }
+    } catch (err) {
+      log.debug(
+        { err, network, batchStart: i },
+        "presigns.discover: cap batch fetch failed",
+      );
+      for (const id of batch) failedCapIds.add(id);
+    }
+  }
+
+  // Batch the session content fetch the same way. `curve` and
+  // `signature_algorithm` live on the `PresignSession` itself.
+  const sessionInfo = new Map<
+    string,
+    { curve: number; signatureAlgorithm: number }
+  >();
+  const presignIds = Array.from(new Set(capPresignId.values()));
+  for (let i = 0; i < presignIds.length; i += DISCOVER_PAGE_SIZE) {
+    const batch = presignIds.slice(i, i + DISCOVER_PAGE_SIZE);
+    try {
+      const got = await sui.core.getObjects({
+        objectIds: batch,
+        include: { json: true },
+      });
+      for (let j = 0; j < batch.length; j++) {
+        const sessionId = batch[j]!;
+        const obj = got.objects?.[j];
+        if (!obj || obj instanceof Error) continue;
+        const json = obj.json as PresignSessionJson | null;
+        if (
+          json &&
+          typeof json.curve === "number" &&
+          typeof json.signature_algorithm === "number"
+        ) {
+          sessionInfo.set(sessionId, {
+            curve: json.curve,
+            signatureAlgorithm: json.signature_algorithm,
+          });
+        }
+      }
+    } catch (err) {
+      log.debug(
+        { err, network, batchStart: i },
+        "presigns.discover: session batch fetch failed",
+      );
+    }
+  }
+
+  for (const capId of untrackedCapIds) {
+    if (failedCapIds.has(capId)) {
+      failed++;
+      continue;
+    }
+    try {
+      const presignId = capPresignId.get(capId);
+      if (!presignId) {
+        throw new Error(`cap ${capId} has no presign_id`);
+      }
+      const session = sessionInfo.get(presignId);
+      if (!session) {
         throw new Error(
-          `no PresignRequestEvent matching presign_id ${sessionId}`,
+          `presign session ${presignId} content missing curve/signature_algorithm`,
         );
       }
+      const networkEncryptionKeyId = await readNekFromDynamicField(
+        network,
+        presignId,
+      );
+
+      const info: CapInfo = {
+        presignId,
+        curve: session.curve,
+        signatureAlgorithm: session.signatureAlgorithm,
+        networkEncryptionKeyId,
+      };
 
       // Insert as `pending`; the existing `promotePending` cron promotes
       // it to `ready` on the next sweep.
       const out = await db
         .insert(presigns)
         .values({
-          suiObjectId: cap.objectId,
+          suiObjectId: capId,
           network,
           curve: info.curve,
           signatureAlgorithm: info.signatureAlgorithm,
           networkEncryptionKeyId: info.networkEncryptionKeyId,
           status: "pending" as const,
-          requestTxDigest: cap.previousTransaction ?? null,
+          requestTxDigest: null,
         })
         .onConflictDoNothing({ target: presigns.suiObjectId })
         .returning({ id: presigns.id });
@@ -496,7 +572,7 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
       }
     } catch (err) {
       log.debug(
-        { err, suiObjectId: cap.objectId, network },
+        { err, suiObjectId: capId, network },
         "presigns.discover: skipping cap, will retry next pass",
       );
       failed++;
@@ -514,56 +590,54 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
 }
 
 /**
- * For every unique `previousTransaction` digest in `caps`, fetch the
- * mint tx with events and build a `presign_id -> CapMintInfo` map.
- * Caps whose `previousTransaction` is missing or whose mint tx can't
- * be fetched are simply absent from the result map; the caller treats
- * an absent lookup as a per-cap failure.
+ * Read the `b"dwallet_network_encryption_key_id"` dynamic field off a
+ * `PresignSession` and return the NEK id (Sui object id) it carries.
+ * Throws if the field is absent or unreadable; the caller treats the
+ * cap as failed and retries next pass.
  */
-async function loadCapMintInfo(
+async function readNekFromDynamicField(
   network: IkaNetwork,
-  caps: Array<{ objectId: string; previousTransaction?: string }>,
-): Promise<Map<string, CapMintInfo>> {
+  presignId: string,
+): Promise<string> {
   const sui = getSuiClient(network);
-  const byDigest = new Set<string>();
-  for (const cap of caps) {
-    if (cap.previousTransaction) byDigest.add(cap.previousTransaction);
-  }
+  // The dynamic field name in Move is `vector<u8>` containing the raw
+  // ASCII bytes of the field name. BCS-encoding a `vector<u8>` prefixes
+  // the byte payload with a ULEB128 length.
+  const nameBytes = new TextEncoder().encode(NEK_DYNAMIC_FIELD_NAME);
+  const nameBcs = encodeVectorU8(nameBytes);
 
-  const out = new Map<string, CapMintInfo>();
-  for (const digest of byDigest) {
-    try {
-      const tx = await sui.core.getTransaction({
-        digest,
-        include: { events: true },
-      });
-      const events = tx.Transaction?.events ?? tx.FailedTransaction?.events;
-      if (!events) continue;
-      for (const event of events) {
-        if (!event.eventType.includes(PRESIGN_REQUEST_EVENT_TYPE)) continue;
-        // The coordinator wraps the inner event in
-        // `DWalletSessionEvent { event_data: PresignRequestEvent, ... }`.
-        const wrapper = event.json as {
-          event_data?: PresignRequestEventData;
-        } | null;
-        const data = wrapper?.event_data;
-        if (!data?.presign_id || !data.dwallet_network_encryption_key_id) {
-          continue;
-        }
-        out.set(data.presign_id, {
-          networkEncryptionKeyId: data.dwallet_network_encryption_key_id,
-          curve: data.curve,
-          signatureAlgorithm: data.signature_algorithm,
-        });
-      }
-    } catch (err) {
-      log.debug(
-        { err, digest, network },
-        "presigns.discover: mint tx fetch failed, will retry next pass",
-      );
-    }
+  const got = await sui.core.getDynamicField({
+    parentId: presignId,
+    name: { type: "vector<u8>", bcs: nameBcs },
+  });
+  const value = got.dynamicField?.value;
+  if (!value?.bcs || value.bcs.length === 0) {
+    throw new Error(`dynamic field empty for presign ${presignId}`);
   }
+  // The value is a Move `ID`, which is BCS-encoded as a 32-byte address.
+  return toHexAddress(value.bcs);
+}
+
+/** Minimal BCS encoder for `vector<u8>` (ULEB128 length + raw bytes). */
+function encodeVectorU8(bytes: Uint8Array): Uint8Array {
+  const lenBytes: number[] = [];
+  let n = bytes.length;
+  while (n >= 0x80) {
+    lenBytes.push((n & 0x7f) | 0x80);
+    n >>>= 7;
+  }
+  lenBytes.push(n);
+  const out = new Uint8Array(lenBytes.length + bytes.length);
+  out.set(lenBytes, 0);
+  out.set(bytes, lenBytes.length);
   return out;
+}
+
+/** 32-byte Sui address from BCS-encoded `ID` -> `0x`-prefixed hex. */
+function toHexAddress(bcs: Uint8Array): string {
+  let hex = "";
+  for (const b of bcs) hex += b.toString(16).padStart(2, "0");
+  return `0x${hex}`;
 }
 
 // ---------------------------------------------------------------------------
