@@ -1,4 +1,3 @@
-import type { SuiClientTypes } from "@mysten/sui/client";
 /**
  * Tx executor abstraction. Routes and workers don't sign transactions
  * directly. They build a `Transaction`, hand it to the executor, and get
@@ -20,12 +19,9 @@ import type { SuiClientTypes } from "@mysten/sui/client";
  *
  * We translate the gas-pool's JSON-RPC `SuiTransactionBlockResponse` to
  * our internal `ExecutedTx` shape directly instead of re-fetching the
- * tx through the gRPC client. Skipping that round-trip saves a few
- * hundred ms per PTB and is what makes the gas-pool path competitive
- * with raw `signAndExecute`. The translation only covers what callers
- * read (`changedObjects[].idOperation === "Created"`, `outputOwner`,
- * event `parsedJson`, `objectTypes` lookups); fields not on that hot
- * path are left empty.
+ * tx through the gRPC client (see `./translate-block.ts`). Skipping that
+ * round-trip saves a few hundred ms per PTB and is what makes the
+ * gas-pool path competitive with raw `signAndExecute`.
  */
 import type { Transaction } from "@mysten/sui/transactions";
 import { env, type IkaNetwork } from "@/config/env";
@@ -38,6 +34,10 @@ import {
   getHotWallet,
   type HotWallet,
 } from "@/shared/sui/hot-wallet";
+import {
+  type TxBlockResponse,
+  translateBlock,
+} from "@/shared/sui/translate-block";
 
 export interface TxExecutor {
   /** Sui address that signs / sponsors. PTBs without a sender get this. */
@@ -93,46 +93,6 @@ interface ReserveGasResponse {
     gas_coins: SuiObjectRef[];
   };
   error?: string | null;
-}
-
-interface JsonRpcStatus {
-  status: "success" | "failure";
-  error?: string;
-}
-
-interface JsonRpcOwner {
-  AddressOwner?: string;
-  ObjectOwner?: string;
-  Shared?: { initial_shared_version: number };
-}
-
-interface JsonRpcObjectChange {
-  type:
-    | "published"
-    | "transferred"
-    | "mutated"
-    | "deleted"
-    | "wrapped"
-    | "created";
-  objectId?: string;
-  objectType?: string;
-  owner?: JsonRpcOwner | "Immutable";
-}
-
-interface JsonRpcEvent {
-  type: string;
-  packageId?: string;
-  transactionModule?: string;
-  sender?: string;
-  parsedJson?: unknown;
-  bcs?: string;
-}
-
-interface TxBlockResponse {
-  digest: string;
-  effects?: { status?: JsonRpcStatus } | null;
-  events?: JsonRpcEvent[] | null;
-  objectChanges?: JsonRpcObjectChange[] | null;
 }
 
 interface ExecuteTxResponse {
@@ -308,89 +268,6 @@ class GasStationExecutor implements TxExecutor {
       clearTimeout(timer);
     }
   }
-}
-
-/**
- * Map the gas-pool's JSON-RPC response shape to the gRPC-shaped
- * `ExecutedTx` callers already consume. We synthesise just enough of
- * the gRPC shape that `shared/sui/effects.ts` keeps working:
- *   - `effects.changedObjects[].{objectId, idOperation, outputOwner}`
- *   - `events[].{eventType, parsedJson}`
- *   - `objectTypes` keyed by object id
- */
-function translateBlock(block: TxBlockResponse): ExecutedTx {
-  const objectTypes: Record<string, string> = {};
-  const changedObjects: SuiClientTypes.TransactionEffects["changedObjects"] =
-    [];
-  for (const c of block.objectChanges ?? []) {
-    if (!c.objectId) continue;
-    if (c.objectType) objectTypes[c.objectId] = c.objectType;
-    const idOperation = mapIdOperation(c.type);
-    if (!idOperation) continue;
-    changedObjects.push({
-      objectId: c.objectId,
-      idOperation,
-      outputOwner: translateOwner(c.owner),
-    } as SuiClientTypes.TransactionEffects["changedObjects"][number]);
-  }
-  const events: SuiClientTypes.Event[] = (block.events ?? []).map(
-    (e) =>
-      ({
-        eventType: e.type,
-        packageId: e.packageId,
-        sender: e.sender,
-        // gRPC `Event` uses `json` for the parsed payload; JSON-RPC
-        // calls it `parsedJson`. Provide `json` since that's what the
-        // sign service reads.
-        json: e.parsedJson ?? null,
-        // gRPC ships `bcs` as raw bytes; JSON-RPC ships base64.
-        // `decodeDKGEvent` wraps with `new Uint8Array(ev.bcs)`, so we
-        // hand it real bytes here.
-        bcs: e.bcs ? new Uint8Array(Buffer.from(e.bcs, "base64")) : undefined,
-      }) as unknown as SuiClientTypes.Event,
-  );
-  return {
-    digest: block.digest,
-    // Only the fields effects.ts touches are populated. Other consumers
-    // would need a richer translation; we add fields when a real caller
-    // shows up.
-    effects: { changedObjects } as unknown as SuiClientTypes.TransactionEffects,
-    events,
-    objectTypes,
-  };
-}
-
-function mapIdOperation(
-  t: JsonRpcObjectChange["type"],
-): "Created" | "Mutated" | undefined {
-  if (t === "created") return "Created";
-  if (t === "mutated" || t === "transferred") return "Mutated";
-  return undefined; // published / deleted / wrapped — not consumed by callers today
-}
-
-function translateOwner(
-  o: JsonRpcOwner | "Immutable" | undefined,
-): SuiClientTypes.ObjectOwner | null {
-  if (!o || o === "Immutable") return null;
-  if (o.AddressOwner) {
-    return {
-      $kind: "AddressOwner",
-      AddressOwner: o.AddressOwner,
-    } as unknown as SuiClientTypes.ObjectOwner;
-  }
-  if (o.ObjectOwner) {
-    return {
-      $kind: "ObjectOwner",
-      ObjectOwner: o.ObjectOwner,
-    } as unknown as SuiClientTypes.ObjectOwner;
-  }
-  if (o.Shared) {
-    return {
-      $kind: "Shared",
-      Shared: o.Shared,
-    } as unknown as SuiClientTypes.ObjectOwner;
-  }
-  return null;
 }
 
 const _executors = new Map<IkaNetwork, TxExecutor>();
