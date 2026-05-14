@@ -2,18 +2,27 @@
  * Chain reconciliation: `discover` back-fills missing rows for caps
  * the operator owns on chain but the DB doesn't know about.
  *
- * Strategy: mock the gRPC client's `listOwnedObjects`, the Ika SDK's
- * `getPresign` + `getLatestNetworkEncryptionKey`, and the tx executor's
+ * Strategy: mock the gRPC client's `listOwnedObjects` and `getTransaction`,
+ * the cap-to-session resolver (via `getObjects`), and the tx executor's
  * `signerAddress`. The DB is stubbed with an in-memory table that
  * mirrors only the call patterns this service hits (select, insert
  * with onConflictDoNothing + returning, eq).
+ *
+ * The NEK assertion is the load-bearing one: the cap's mint tx emits a
+ * `PresignRequestEvent` carrying `dwallet_network_encryption_key_id`,
+ * and that is the NEK the row must be bound to (NOT some "latest" key
+ * the operator has rotated to since).
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 const NETWORK = "testnet";
 const OPERATOR =
   "0x0000000000000000000000000000000000000000000000000000000000000aaa";
-const NEK_ID = "0xnek";
+// NEK encoded into the mint events. This is deliberately a stable, old
+// value; the test that follows seeds a different "latest" NEK to prove
+// the row uses the event NEK, not the latest.
+const EVENT_NEK_ID = "0xnek_at_mint_time";
+const LATEST_NEK_ID = "0xnek_after_rotation";
 
 mock.module("@/config/env", () => ({
   env: { LOG_LEVEL: "silent", NODE_ENV: "test" },
@@ -263,23 +272,66 @@ mock.module("@/shared/db/client", () => ({
   schema: {},
 }));
 
-// Cap fixtures: A is already tracked, B is fresh + Completed, C throws on
-// session lookup (RPC blip) and should be counted as `failed`.
+// Cap fixtures. Caps A and B were minted in the SAME mint tx (so they
+// share `previousTransaction = TX_AB` and both must resolve from a
+// single `getTransaction` fetch). Cap C was minted alone in TX_C. Cap D
+// also shares TX_AB but its presign_id is NOT present in that tx's
+// events, exercising the "event lookup miss => failed" path.
 const CAP_A = "0xCAPA";
 const CAP_B = "0xCAPB";
 const CAP_C = "0xCAPC";
+const CAP_D = "0xCAPD";
+const SESSION_A = "0xSESSA";
 const SESSION_B = "0xSESSB";
 const SESSION_C = "0xSESSC";
+const SESSION_D_MISSING = "0xSESSD_NOT_IN_TX";
+const TX_AB = "0xTX_AB";
+const TX_C = "0xTX_C";
 
 const PRESIGN_CAP_TYPE = "0xpkg::coordinator_inner::UnverifiedPresignCap";
+const PRESIGN_EVENT_TYPE = "0xpkg::coordinator_inner::PresignRequestEvent";
+
+// Wrap event_data the same way the coordinator does (DWalletSessionEvent).
+function wrappedPresignEvent(
+  presignId: string,
+  nek: string,
+  curve = 0,
+  sigAlgo = 0,
+) {
+  return {
+    eventType: `0xpkg::sessions_manager::DWalletSessionEvent<${PRESIGN_EVENT_TYPE}>`,
+    json: {
+      event_data: {
+        curve,
+        dwallet_id: null,
+        dwallet_network_encryption_key_id: nek,
+        dwallet_public_output: null,
+        presign_id: presignId,
+        signature_algorithm: sigAlgo,
+      },
+    },
+  };
+}
 
 const fakeSuiClient = {
   core: {
     listOwnedObjects: mock(async (_args: unknown) => ({
       objects: [
-        { objectId: CAP_A, type: PRESIGN_CAP_TYPE },
-        { objectId: CAP_B, type: PRESIGN_CAP_TYPE },
-        { objectId: CAP_C, type: PRESIGN_CAP_TYPE },
+        {
+          objectId: CAP_A,
+          type: PRESIGN_CAP_TYPE,
+          previousTransaction: TX_AB,
+        },
+        {
+          objectId: CAP_B,
+          type: PRESIGN_CAP_TYPE,
+          previousTransaction: TX_AB,
+        },
+        {
+          objectId: CAP_C,
+          type: PRESIGN_CAP_TYPE,
+          previousTransaction: TX_C,
+        },
         // Irrelevant object that must not be counted.
         { objectId: "0xCOIN", type: "0x2::coin::Coin<0x2::sui::SUI>" },
       ],
@@ -288,17 +340,44 @@ const fakeSuiClient = {
     })),
     getObjects: mock(async (args: { objectIds: string[] }) => {
       const id = args.objectIds[0];
+      if (id === CAP_A) {
+        return { objects: [{ json: { presign_id: SESSION_A } }] };
+      }
       if (id === CAP_B) {
-        return {
-          objects: [{ json: { presign_id: SESSION_B } }],
-        };
+        return { objects: [{ json: { presign_id: SESSION_B } }] };
       }
       if (id === CAP_C) {
-        return {
-          objects: [{ json: { presign_id: SESSION_C } }],
-        };
+        return { objects: [{ json: { presign_id: SESSION_C } }] };
+      }
+      if (id === CAP_D) {
+        return { objects: [{ json: { presign_id: SESSION_D_MISSING } }] };
       }
       throw new Error(`unexpected getObjects id ${id}`);
+    }),
+    // The mint tx for TX_AB carries events for SESSION_A and SESSION_B.
+    // TX_C carries one event for SESSION_C. The "missing" session
+    // intentionally has no event anywhere; it must surface as failed.
+    getTransaction: mock(async (args: { digest: string }) => {
+      if (args.digest === TX_AB) {
+        return {
+          $kind: "Transaction",
+          Transaction: {
+            events: [
+              wrappedPresignEvent(SESSION_A, EVENT_NEK_ID, 0, 0),
+              wrappedPresignEvent(SESSION_B, EVENT_NEK_ID, 0, 0),
+            ],
+          },
+        };
+      }
+      if (args.digest === TX_C) {
+        return {
+          $kind: "Transaction",
+          Transaction: {
+            events: [wrappedPresignEvent(SESSION_C, EVENT_NEK_ID, 2, 1)],
+          },
+        };
+      }
+      throw new Error(`unexpected getTransaction digest ${args.digest}`);
     }),
   },
 };
@@ -307,18 +386,13 @@ mock.module("@/shared/sui/client", () => ({
   getSuiClient: () => fakeSuiClient,
 }));
 
+// `getIkaClient` is no longer touched by `discover`, but other code paths
+// in the service file still import it. Stub it harmlessly. If it gets
+// called, the test should fail loudly.
 const fakeIkaClient = {
-  getLatestNetworkEncryptionKey: mock(async () => ({ id: NEK_ID })),
-  getPresign: mock(async (sessionId: string) => {
-    if (sessionId === SESSION_B) {
-      return {
-        curve: 0,
-        signature_algorithm: 0,
-        state: { $kind: "Completed" },
-      };
-    }
-    // SESSION_C: simulate an RPC hiccup, exercising the per-cap try/catch.
-    throw new Error("transient RPC failure for SESSION_C");
+  getLatestNetworkEncryptionKey: mock(async () => ({ id: LATEST_NEK_ID })),
+  getPresign: mock(async (_id: string) => {
+    throw new Error("getPresign must not be called by discover");
   }),
 };
 
@@ -343,7 +417,7 @@ function seedTrackedCap(suiObjectId: string) {
     network: NETWORK,
     curve: 0,
     signatureAlgorithm: 0,
-    networkEncryptionKeyId: NEK_ID,
+    networkEncryptionKeyId: EVENT_NEK_ID,
     status: "ready",
     requestTxDigest: "0xseed",
     signRequestId: null,
@@ -359,11 +433,37 @@ describe("presigns.discover", () => {
     resetState();
     fakeSuiClient.core.listOwnedObjects.mockClear();
     fakeSuiClient.core.getObjects.mockClear();
+    fakeSuiClient.core.getTransaction.mockClear();
     fakeIkaClient.getPresign.mockClear();
     fakeIkaClient.getLatestNetworkEncryptionKey.mockClear();
   });
 
-  test("inserts one row per untracked cap, skips tracked, counts failures", async () => {
+  test("binds inserted row to mint-tx NEK, not operator latest", async () => {
+    // No caps seeded; CAP_A, CAP_B, CAP_C are all fresh.
+    const result = await discover(NETWORK);
+
+    expect(result).toEqual({
+      scanned: 3,
+      alreadyTracked: 0,
+      inserted: 3,
+      failed: 0,
+    });
+
+    expect(insertCalls).toHaveLength(3);
+    for (const row of insertCalls) {
+      // The decisive assertion: every row picks up the NEK that was
+      // present in the mint tx event, NOT the operator's current key.
+      expect(row.networkEncryptionKeyId).toBe(EVENT_NEK_ID);
+      expect(row.networkEncryptionKeyId).not.toBe(LATEST_NEK_ID);
+      expect(row.status).toBe("pending");
+    }
+    // Status promotion is the cron's job. We never call getPresign or
+    // getLatestNetworkEncryptionKey from discover anymore.
+    expect(fakeIkaClient.getPresign).not.toHaveBeenCalled();
+    expect(fakeIkaClient.getLatestNetworkEncryptionKey).not.toHaveBeenCalled();
+  });
+
+  test("skips already-tracked caps and inserts only the new ones", async () => {
     seedTrackedCap(CAP_A);
 
     const result = await discover(NETWORK);
@@ -371,48 +471,55 @@ describe("presigns.discover", () => {
     expect(result).toEqual({
       scanned: 3,
       alreadyTracked: 1,
-      inserted: 1,
-      failed: 1,
+      inserted: 2,
+      failed: 0,
     });
-
-    // Exactly one new row was written (CAP_B); CAP_A was skipped, CAP_C
-    // failed the session lookup and was deferred.
-    expect(insertCalls).toHaveLength(1);
-    expect(insertCalls[0]!.suiObjectId).toBe(CAP_B);
-    expect(insertCalls[0]!.status).toBe("ready");
-    expect(insertCalls[0]!.requestTxDigest).toBeNull();
-    expect(insertCalls[0]!.networkEncryptionKeyId).toBe(NEK_ID);
-
-    // The persisted row reflects what was inserted.
-    const newRow = presignRows.find((r) => r.suiObjectId === CAP_B);
-    expect(newRow).toBeDefined();
-    expect(newRow!.status).toBe("ready");
-
-    // Sui owner scan happened once (single page), session resolution
-    // ran for both untracked caps (B + C).
-    expect(fakeSuiClient.core.listOwnedObjects).toHaveBeenCalledTimes(1);
-    expect(fakeSuiClient.core.getObjects).toHaveBeenCalledTimes(2);
+    expect(insertCalls).toHaveLength(2);
+    const insertedIds = insertCalls.map((r) => r.suiObjectId);
+    expect(insertedIds).toContain(CAP_B);
+    expect(insertedIds).toContain(CAP_C);
   });
 
-  test("non-Completed presigns are inserted as pending so promotePending picks them up", async () => {
-    // Re-stub getPresign so CAP_B returns Requested instead of Completed.
-    fakeIkaClient.getPresign.mockImplementation(async (id: string) => {
-      if (id === SESSION_B) {
-        return {
-          curve: 2,
-          signature_algorithm: 0,
-          state: { $kind: "Requested" },
-        };
-      }
-      throw new Error("nope");
-    });
+  test("event lookup miss counts as failed, not inserted", async () => {
+    // Inject a fourth cap pointing at TX_AB. Its presign_id is
+    // SESSION_D_MISSING, which is NOT in TX_AB's events. The cap must
+    // be counted as failed (retry next pass), not silently inserted.
+    fakeSuiClient.core.listOwnedObjects.mockImplementationOnce(async () => ({
+      objects: [
+        {
+          objectId: CAP_A,
+          type: PRESIGN_CAP_TYPE,
+          previousTransaction: TX_AB,
+        },
+        {
+          objectId: CAP_D,
+          type: PRESIGN_CAP_TYPE,
+          previousTransaction: TX_AB,
+        },
+      ],
+      hasNextPage: false,
+      cursor: null,
+    }));
 
     const result = await discover(NETWORK);
-    expect(result.inserted).toBe(1);
-    expect(result.failed).toBe(2); // CAP_A no longer seeded as tracked; CAP_C still throws.
-    const newRow = presignRows.find((r) => r.suiObjectId === CAP_B);
-    expect(newRow!.status).toBe("pending");
-    expect(newRow!.curve).toBe(2);
+
+    expect(result.scanned).toBe(2);
+    expect(result.inserted).toBe(1); // only CAP_A landed
+    expect(result.failed).toBe(1); // CAP_D's session missing from events
+    expect(insertCalls).toHaveLength(1);
+    expect(insertCalls[0]!.suiObjectId).toBe(CAP_A);
+  });
+
+  test("caches mint tx fetches per unique previousTransaction", async () => {
+    // Two caps in TX_AB + one cap in TX_C => exactly 2 getTransaction
+    // calls, NOT one per cap. This is the whole point of the cache.
+    await discover(NETWORK);
+
+    expect(fakeSuiClient.core.getTransaction).toHaveBeenCalledTimes(2);
+    const calledDigests = fakeSuiClient.core.getTransaction.mock.calls.map(
+      (c) => (c[0] as { digest: string }).digest,
+    );
+    expect(new Set(calledDigests)).toEqual(new Set([TX_AB, TX_C]));
   });
 
   test("all-tracked input is a no-op insert", async () => {
@@ -427,9 +534,9 @@ describe("presigns.discover", () => {
     expect(result.inserted).toBe(0);
     expect(result.failed).toBe(0);
     expect(insertCalls).toHaveLength(0);
-    // No session resolution needed because every cap was already known.
+    // No mint-tx fetch needed because every cap was already known.
+    expect(fakeSuiClient.core.getTransaction).not.toHaveBeenCalled();
     expect(fakeSuiClient.core.getObjects).not.toHaveBeenCalled();
-    expect(fakeIkaClient.getPresign).not.toHaveBeenCalled();
   });
 
   test("references the presigns table (sanity check for mock wiring)", () => {

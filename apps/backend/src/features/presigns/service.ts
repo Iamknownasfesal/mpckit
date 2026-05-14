@@ -341,6 +341,14 @@ const DISCOVER_RPC_INTERVAL_MS = 100;
 /** Substring that identifies an `UnverifiedPresignCap` Move type tag. */
 const UNVERIFIED_PRESIGN_CAP_TYPE = "::coordinator_inner::UnverifiedPresignCap";
 
+/**
+ * Substring that identifies a `PresignRequestEvent` emitted by the
+ * coordinator at the time the upstream `PresignSession` is created.
+ * Carries the NEK id, curve, and signature algorithm the cap is bound
+ * to; neither the cap nor the session expose them as on-chain fields.
+ */
+const PRESIGN_REQUEST_EVENT_TYPE = "::coordinator_inner::PresignRequestEvent";
+
 export interface DiscoverResult {
   scanned: number;
   alreadyTracked: number;
@@ -349,14 +357,41 @@ export interface DiscoverResult {
 }
 
 /**
+ * Parsed shape of a `PresignRequestEvent`. The coordinator wraps it in
+ * `sessions_manager::DWalletSessionEvent`, so the interesting fields
+ * live under `event_data`.
+ */
+interface PresignRequestEventData {
+  presign_id: string;
+  dwallet_network_encryption_key_id: string;
+  curve: number;
+  signature_algorithm: number;
+}
+
+/** Resolved per-cap metadata pulled from a `PresignRequestEvent`. */
+interface CapMintInfo {
+  networkEncryptionKeyId: string;
+  curve: number;
+  signatureAlgorithm: number;
+}
+
+/**
  * Scan the operator wallet for `UnverifiedPresignCap` objects and
  * back-fill any whose row is missing from `presigns`. Handles caps
  * created out-of-band (operator scripts, prior deployments) so the
  * DB-tracked pool catches up with what the chain actually holds.
  *
- * Per-cap failures (RPC blips, unresolvable session, race losses) are
- * counted as `failed` and retried on the next pass; one bad cap never
- * sinks the whole sweep.
+ * For each cap we resolve the NEK, curve, and signature algorithm from
+ * the `PresignRequestEvent` emitted by the cap's mint transaction.
+ * Caps minted under a prior NEK epoch must keep their original NEK,
+ * otherwise `verify_presign_cap` rejects them on first use. The mint
+ * tx digest is the cap object's `previousTransaction`, and one mint
+ * tx can produce many caps, so we fetch each unique tx exactly once
+ * per discover pass and cache the parsed events.
+ *
+ * Per-cap failures (RPC blips, missing event match) are counted as
+ * `failed` and retried on the next pass; one bad cap never sinks the
+ * whole sweep.
  */
 export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
   const operator = getTxExecutor(network).signerAddress();
@@ -368,20 +403,25 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
   // qualified type tag (package id + module + struct), which varies
   // across mpckitcore deployments; filter client-side instead so caps
   // minted by older packages still get reconciled.
-  const capObjectIds: string[] = [];
+  //
+  // We also request `previousTransaction` so we know which mint tx to
+  // pull events from. The gRPC server already populates this field in
+  // the same response, so no extra round trip is needed.
+  const capRefs: Array<{ objectId: string; previousTransaction?: string }> = [];
   let cursor: string | null | undefined;
-  // Page until exhausted. First iteration uses an undefined cursor
-  // (start of list); subsequent iterations carry the server-returned
-  // cursor forward until `hasNextPage` flips false.
   while (true) {
     const page = await sui.core.listOwnedObjects({
       owner: operator,
       limit: DISCOVER_PAGE_SIZE,
       cursor: cursor ?? null,
+      include: { previousTransaction: true },
     });
     for (const obj of page.objects) {
       if (obj.type.includes(UNVERIFIED_PRESIGN_CAP_TYPE)) {
-        capObjectIds.push(obj.objectId);
+        capRefs.push({
+          objectId: obj.objectId,
+          previousTransaction: obj.previousTransaction ?? undefined,
+        });
       }
     }
     if (!page.hasNextPage) break;
@@ -389,7 +429,7 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
     if (!cursor) break;
   }
 
-  const scanned = capObjectIds.length;
+  const scanned = capRefs.length;
 
   // Pre-load the set of already-tracked cap ids in one shot. With ~1k
   // caps this is a ~30KB result, far cheaper than 1k point lookups.
@@ -401,7 +441,7 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
     : [];
   const trackedSet = new Set(tracked.map((r) => r.suiObjectId));
 
-  const untracked = capObjectIds.filter((id) => !trackedSet.has(id));
+  const untracked = capRefs.filter((c) => !trackedSet.has(c.objectId));
   let alreadyTracked = scanned - untracked.length;
   let inserted = 0;
   let failed = 0;
@@ -414,32 +454,35 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
     return { scanned, alreadyTracked, inserted, failed };
   }
 
-  const ika = await getIkaClient(network);
-  // Bind discovered rows to the operator's current network encryption
-  // key. The session itself may have been computed against an older
-  // NEK, but the SDK's sign path always resolves the active one at
-  // submission time, so storing the latest is consistent with how
-  // `refill` records new rows.
-  const networkEncryptionKeyId = (await ika.getLatestNetworkEncryptionKey()).id;
+  // Resolve each unique mint tx exactly once, parse a presign_id-keyed
+  // event map, and reuse for every cap that shares the digest. A batch
+  // of 10 caps per mint tx means ~10x fewer tx fetches on busy operators.
+  const sessionCache = await loadCapMintInfo(network, untracked);
 
-  for (const capObjectId of untracked) {
+  for (const cap of untracked) {
     try {
-      const sessionId = await resolveSessionId(network, capObjectId);
-      const presign = await ika.getPresign(sessionId);
-      const stateKind = presign.state.$kind;
-      const status: "pending" | "ready" =
-        stateKind === "Completed" ? "ready" : "pending";
+      const sessionId = await resolveSessionId(network, cap.objectId);
+      const info = sessionCache.get(sessionId);
+      if (!info) {
+        // No matching mint-tx event found; retry next pass rather than
+        // bind the row to the wrong NEK.
+        throw new Error(
+          `no PresignRequestEvent matching presign_id ${sessionId}`,
+        );
+      }
 
+      // Insert as `pending`; the existing `promotePending` cron promotes
+      // it to `ready` on the next sweep.
       const out = await db
         .insert(presigns)
         .values({
-          suiObjectId: capObjectId,
+          suiObjectId: cap.objectId,
           network,
-          curve: presign.curve,
-          signatureAlgorithm: presign.signature_algorithm,
-          networkEncryptionKeyId,
-          status,
-          requestTxDigest: null,
+          curve: info.curve,
+          signatureAlgorithm: info.signatureAlgorithm,
+          networkEncryptionKeyId: info.networkEncryptionKeyId,
+          status: "pending" as const,
+          requestTxDigest: cap.previousTransaction ?? null,
         })
         .onConflictDoNothing({ target: presigns.suiObjectId })
         .returning({ id: presigns.id });
@@ -452,11 +495,8 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
         inserted++;
       }
     } catch (err) {
-      // Resolvable next pass: presign session may not be observable yet,
-      // RPC may have hiccupped, etc. Don't write a `failed` row — that
-      // status is reserved for caps the coordinator explicitly rejected.
       log.debug(
-        { err, suiObjectId: capObjectId, network },
+        { err, suiObjectId: cap.objectId, network },
         "presigns.discover: skipping cap, will retry next pass",
       );
       failed++;
@@ -471,6 +511,59 @@ export async function discover(network: IkaNetwork): Promise<DiscoverResult> {
     "presigns.discover: done",
   );
   return { scanned, alreadyTracked, inserted, failed };
+}
+
+/**
+ * For every unique `previousTransaction` digest in `caps`, fetch the
+ * mint tx with events and build a `presign_id -> CapMintInfo` map.
+ * Caps whose `previousTransaction` is missing or whose mint tx can't
+ * be fetched are simply absent from the result map; the caller treats
+ * an absent lookup as a per-cap failure.
+ */
+async function loadCapMintInfo(
+  network: IkaNetwork,
+  caps: Array<{ objectId: string; previousTransaction?: string }>,
+): Promise<Map<string, CapMintInfo>> {
+  const sui = getSuiClient(network);
+  const byDigest = new Set<string>();
+  for (const cap of caps) {
+    if (cap.previousTransaction) byDigest.add(cap.previousTransaction);
+  }
+
+  const out = new Map<string, CapMintInfo>();
+  for (const digest of byDigest) {
+    try {
+      const tx = await sui.core.getTransaction({
+        digest,
+        include: { events: true },
+      });
+      const events = tx.Transaction?.events ?? tx.FailedTransaction?.events;
+      if (!events) continue;
+      for (const event of events) {
+        if (!event.eventType.includes(PRESIGN_REQUEST_EVENT_TYPE)) continue;
+        // The coordinator wraps the inner event in
+        // `DWalletSessionEvent { event_data: PresignRequestEvent, ... }`.
+        const wrapper = event.json as {
+          event_data?: PresignRequestEventData;
+        } | null;
+        const data = wrapper?.event_data;
+        if (!data?.presign_id || !data.dwallet_network_encryption_key_id) {
+          continue;
+        }
+        out.set(data.presign_id, {
+          networkEncryptionKeyId: data.dwallet_network_encryption_key_id,
+          curve: data.curve,
+          signatureAlgorithm: data.signature_algorithm,
+        });
+      }
+    } catch (err) {
+      log.debug(
+        { err, digest, network },
+        "presigns.discover: mint tx fetch failed, will retry next pass",
+      );
+    }
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
