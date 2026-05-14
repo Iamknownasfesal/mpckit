@@ -20,6 +20,7 @@
  * that whichever job arrives second will see an empty address.
  */
 import { Transaction } from "@mysten/sui/transactions";
+import { normalizeStructTag } from "@mysten/sui/utils";
 import { eq } from "drizzle-orm";
 import { env, type IkaNetwork } from "@/config/env";
 import { log } from "@/config/log";
@@ -52,11 +53,18 @@ export async function sweepUserAddress(
   const operator = getHotWallet();
   const sponsor = operator.address();
 
-  // Eligible balances at the sender.
+  // Eligible balances at the sender. Sui gRPC returns coin types in
+  // fully expanded 32-byte hex form ("0x000…002::sui::SUI"), while the
+  // env config typically uses the short form. Normalise both sides so
+  // a short-form env doesn't filter out every balance and silently
+  // leave deposits stuck at the sender address.
   const balanceList = await sui.core.listBalances({ owner: sender });
-  const accepted = new Set(env.BILLING_ACCEPTED_COIN_TYPES);
+  const accepted = new Set(
+    env.BILLING_ACCEPTED_COIN_TYPES.map((t) => normalizeStructTag(t)),
+  );
   const eligible = (balanceList.balances ?? []).filter(
-    (b) => accepted.has(b.coinType) && BigInt(b.balance) > 0n,
+    (b) =>
+      accepted.has(normalizeStructTag(b.coinType)) && BigInt(b.balance) > 0n,
   );
   if (eligible.length === 0) return { status: "empty" };
 

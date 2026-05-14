@@ -150,6 +150,7 @@ class GasStationExecutor implements TxExecutor {
     private readonly gasBudgetMist: bigint,
     private readonly reserveDurationSecs: number,
     private readonly lockKey: string,
+    private readonly gasStationTimeoutMs: number,
   ) {}
 
   signerAddress(): string {
@@ -238,23 +239,13 @@ class GasStationExecutor implements TxExecutor {
   private async reserveGas(): Promise<
     NonNullable<ReserveGasResponse["result"]>
   > {
-    const res = await fetch(`${this.url}/v1/reserve_gas`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${this.authToken}`,
-      },
-      body: JSON.stringify({
+    const body = await this.gasStationPost<ReserveGasResponse>(
+      "/v1/reserve_gas",
+      {
         gas_budget: Number(this.gasBudgetMist),
         reserve_duration_secs: this.reserveDurationSecs,
-      }),
-    });
-    if (!res.ok) {
-      throw new Error(
-        `gas-station reserve_gas ${res.status}: ${(await res.text()).slice(0, 500)}`,
-      );
-    }
-    const body = (await res.json()) as ReserveGasResponse;
+      },
+    );
     if (body.error || !body.result) {
       throw new Error(
         `gas-station reserve_gas error: ${body.error ?? "no result"}`,
@@ -268,13 +259,9 @@ class GasStationExecutor implements TxExecutor {
     txBytes: Uint8Array,
     userSig: string,
   ): Promise<ExecuteTxResponse> {
-    const res = await fetch(`${this.url}/v1/execute_tx`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${this.authToken}`,
-      },
-      body: JSON.stringify({
+    const body = await this.gasStationPost<ExecuteTxResponse>(
+      "/v1/execute_tx",
+      {
         reservation_id: reservationId,
         tx_bytes: Buffer.from(txBytes).toString("base64"),
         user_sig: userSig,
@@ -283,18 +270,43 @@ class GasStationExecutor implements TxExecutor {
           showEvents: true,
           showObjectChanges: true,
         },
-      }),
-    });
-    if (!res.ok) {
-      throw new Error(
-        `gas-station execute_tx ${res.status}: ${(await res.text()).slice(0, 500)}`,
-      );
-    }
-    const body = (await res.json()) as ExecuteTxResponse;
+      },
+    );
     if (body.error) {
       throw new Error(`gas-station execute_tx error: ${body.error}`);
     }
     return body;
+  }
+
+  /**
+   * Shared POST glue for the gas-station daemon. AbortController-times
+   * out after `GAS_STATION_TIMEOUT_MS` so a hung daemon doesn't hold
+   * the OperatorCap lock for the full lock TTL (which would amplify
+   * into cascading 5xx). Throws on non-2xx + body slice for log
+   * context; caller maps to `TxExecutorError` with the right phase.
+   */
+  private async gasStationPost<T>(path: string, body: unknown): Promise<T> {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), this.gasStationTimeoutMs);
+    try {
+      const res = await fetch(`${this.url}${path}`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${this.authToken}`,
+        },
+        body: JSON.stringify(body),
+        signal: ctl.signal,
+      });
+      if (!res.ok) {
+        throw new Error(
+          `gas-station ${path} ${res.status}: ${(await res.text()).slice(0, 500)}`,
+        );
+      }
+      return (await res.json()) as T;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
 
@@ -395,6 +407,7 @@ export function getTxExecutor(network: IkaNetwork): TxExecutor {
     env.SUI_GAS_STATION_BUDGET_MIST,
     env.SUI_GAS_STATION_RESERVE_SECS,
     `mpckit:tx-lock:${network}`,
+    env.SUI_GAS_STATION_TIMEOUT_MS,
   );
   _executors.set(network, exec);
   log.info(
