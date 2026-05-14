@@ -35,7 +35,6 @@ import { env } from "@/config/env";
 import { log } from "@/config/log";
 import {
   charge as chargeCredits,
-  getBalance,
   OP_PRICES,
   refund as refundCredits,
 } from "@/features/billing/service";
@@ -150,25 +149,25 @@ export async function prepareSignRequest(
     );
   }
 
-  // Reject zero-credit callers before allocating a presign. Without
-  // this gate, an attacker spinning unique Idempotency-Keys would
-  // burn one presign per 402 response (the row + presign sit waiting
-  // for the sweep to roll them back), draining the pool faster than
-  // refill. The atomic charge inside `chargeCredits` is still the
-  // canonical authority — this is the cheap up-front guard.
-  const signPrice = BigInt(OP_PRICES.sign);
-  const balance = await getBalance(args.userId, args.network);
-  if (balance < signPrice) {
-    throw errors.paymentRequired(
-      `insufficient credits: have ${balance}, need ${signPrice}`,
-      "INSUFFICIENT_CREDITS",
-    );
-  }
+  // Pre-generate the row id so the atomic charge can run before any
+  // presign mutation. A non-atomic balance pre-check followed by a
+  // post-allocate charge let N concurrent prepares each pass the
+  // check, each allocate a presign, but only one charge win, leaving
+  // the rest stuck `allocated` until the sweep (DoS on inventory).
+  const signRequestId = crypto.randomUUID();
+  await chargeCredits({
+    userId: args.userId,
+    network: args.network,
+    opType: "sign",
+    opId: signRequestId,
+    amountMicro: BigInt(OP_PRICES.sign),
+    reason: "sign request prepared",
+  });
 
-  // Insert the prepared row first so allocate has a stable opId.
   const inserted = await db
     .insert(signRequests)
     .values({
+      id: signRequestId,
       userId: args.userId,
       network: args.network,
       idempotencyKey: args.idempotencyKey,
@@ -192,6 +191,14 @@ export async function prepareSignRequest(
     // Drop the prepared row; sweep would catch it but a clean delete
     // keeps the user-visible state consistent.
     await db.delete(signRequests).where(eq(signRequests.id, row.id));
+    await refundCredits({
+      userId: args.userId,
+      network: args.network,
+      opType: "sign",
+      opId: signRequestId,
+      amountMicro: BigInt(OP_PRICES.sign),
+      reason: "presign pool empty at prepare",
+    });
     await enqueue(JOBS.presignRefill, {
       network: args.network,
       curve: dw.curve,
@@ -209,16 +216,6 @@ export async function prepareSignRequest(
     .set({ presignId: presignAlloc.id, updatedAt: new Date() })
     .where(eq(signRequests.id, row.id))
     .returning();
-
-  // Charge upfront. Refund happens on permanent failure or TTL sweep.
-  await chargeCredits({
-    userId: args.userId,
-    network: args.network,
-    opType: "sign",
-    opId: row.id,
-    amountMicro: BigInt(OP_PRICES.sign),
-    reason: "sign request prepared",
-  });
 
   const presignBytes = await fetchPresignBytes(
     args.network,
