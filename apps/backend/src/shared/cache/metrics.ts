@@ -89,3 +89,15 @@ export const hotWalletSuiMist = new Gauge({
   labelNames: ["network"] as const,
   registers: [registry],
 });
+
+/** `chargeWithRefund` debited a user, the wrapped operation threw, and
+ *  the compensating `refund` call also threw. The original error is
+ *  still rethrown to the caller (their expected behaviour), but the
+ *  user is charged with no credit returned until an operator reconciles
+ *  via the structured log line that pairs with each increment. */
+export const billingRefundFailed = new Counter({
+  name: "billing_refund_failed_total",
+  help: "chargeWithRefund refund-on-throw attempts that themselves threw.",
+  labelNames: ["network", "opType"] as const,
+  registers: [registry],
+});
