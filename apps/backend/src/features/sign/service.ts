@@ -38,6 +38,7 @@ import {
   OP_PRICES,
   refund as refundCredits,
 } from "@/features/billing/service";
+import { ensureDwalletNek } from "@/features/dwallets/service";
 import {
   allocate as allocatePresign,
   markConsumedPending,
@@ -181,10 +182,16 @@ export async function prepareSignRequest(
     .returning();
   const row = inserted[0]!;
 
+  // Sign-time presign allocation must match the dwallet's NEK exactly
+  // or `validate_and_initiate_sign` will abort. Lazy-backfill the NEK
+  // for rows that predate the schema column.
+  const dwalletNek = await ensureDwalletNek(dw.id, args.network);
+
   const presignAlloc = await allocatePresign({
     network: args.network,
     curve: dw.curve,
     signatureAlgorithm: args.signatureAlgorithm,
+    networkEncryptionKeyId: dwalletNek,
     signRequestId: row.id,
   });
   if (!presignAlloc) {
@@ -197,8 +204,12 @@ export async function prepareSignRequest(
       opType: "sign",
       opId: signRequestId,
       amountMicro: BigInt(OP_PRICES.sign),
-      reason: "presign pool empty at prepare",
+      reason: "presign pool empty for dwallet NEK at prepare",
     });
+    // Still nudge a refill so the bucket rebuilds, but note that
+    // `refill` always mints under the operator's latest NEK; if this
+    // dwallet sits on a stale NEK, refill won't help it and the
+    // operator must address the rotation separately.
     await enqueue(JOBS.presignRefill, {
       network: args.network,
       curve: dw.curve,
@@ -206,8 +217,8 @@ export async function prepareSignRequest(
       count: env.PRESIGN_BATCH_SIZE,
     });
     throw errors.unprocessable(
-      "presign pool empty; retry shortly",
-      "PRESIGN_POOL_EMPTY",
+      `no ready presign available for NEK ${dwalletNek}; retry shortly`,
+      "PRESIGN_POOL_EMPTY_FOR_NEK",
     );
   }
 

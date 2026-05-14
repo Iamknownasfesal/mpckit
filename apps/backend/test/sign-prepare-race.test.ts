@@ -316,6 +316,16 @@ const allocateSpy = spyOn(realPresigns, "allocate").mockImplementation(
 );
 const allocateMock = allocateImpl;
 
+// `prepareSignRequest` now reads the dwallet's NEK via
+// `ensureDwalletNek` before allocating. Stub it to a fixed value so
+// these tests stay focused on the charge/allocate ordering they were
+// originally written for.
+const TEST_NEK = "0xNEK_TEST";
+const realDwallets = await import("@/features/dwallets/service");
+const ensureNekSpy = spyOn(realDwallets, "ensureDwalletNek").mockImplementation(
+  async () => TEST_NEK,
+);
+
 // Now import the service AFTER all mocks are wired.
 const { prepareSignRequest } = await import("@/features/sign/service");
 
@@ -376,6 +386,7 @@ describe("prepareSignRequest M2: charge before allocate", () => {
     chargeSpy.mockRestore();
     refundSpy.mockRestore();
     allocateSpy.mockRestore();
+    ensureNekSpy.mockRestore();
     mock.restore();
   });
 
@@ -400,7 +411,7 @@ describe("prepareSignRequest M2: charge before allocate", () => {
     );
     expect(codes.sort()).toEqual([
       "INSUFFICIENT_CREDITS",
-      "PRESIGN_POOL_EMPTY",
+      "PRESIGN_POOL_EMPTY_FOR_NEK",
     ]);
 
     // The loser bailed at charge; only the winner touched the pool.
@@ -424,7 +435,9 @@ describe("prepareSignRequest M2: charge before allocate", () => {
     } catch (e) {
       thrown = e;
     }
-    expect((thrown as { code?: string }).code).toBe("PRESIGN_POOL_EMPTY");
+    expect((thrown as { code?: string }).code).toBe(
+      "PRESIGN_POOL_EMPTY_FOR_NEK",
+    );
     expect((thrown as { status?: number }).status).toBe(422);
 
     // Charge ran, then refund ran. Net balance restored.

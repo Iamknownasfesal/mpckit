@@ -2,27 +2,30 @@
  * Chain reconciliation: `discover` back-fills missing rows for caps
  * the operator owns on chain but the DB doesn't know about.
  *
- * Strategy: mock the gRPC client's `listOwnedObjects` and `getTransaction`,
- * the cap-to-session resolver (via `getObjects`), and the tx executor's
- * `signerAddress`. The DB is stubbed with an in-memory table that
- * mirrors only the call patterns this service hits (select, insert
- * with onConflictDoNothing + returning, eq).
+ * Strategy: mock the gRPC client's `listOwnedObjects`, `getObjects`,
+ * and `getDynamicField`, plus the tx executor's `signerAddress`. The
+ * DB is stubbed with an in-memory table that mirrors only the call
+ * patterns this service hits (select, insert with onConflictDoNothing
+ * + returning, eq).
  *
- * The NEK assertion is the load-bearing one: the cap's mint tx emits a
- * `PresignRequestEvent` carrying `dwallet_network_encryption_key_id`,
- * and that is the NEK the row must be bound to (NOT some "latest" key
- * the operator has rotated to since).
+ * The NEK assertion is the load-bearing one: the `PresignSession`'s
+ * `b"dwallet_network_encryption_key_id"` dynamic field is the canonical
+ * source the coordinator reads in `validate_and_initiate_sign`, so the
+ * inserted row's NEK must match that field exactly (NOT some "latest"
+ * key the operator has rotated to since).
  */
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 const NETWORK = "testnet";
 const OPERATOR =
   "0x0000000000000000000000000000000000000000000000000000000000000aaa";
-// NEK encoded into the mint events. This is deliberately a stable, old
-// value; the test that follows seeds a different "latest" NEK to prove
-// the row uses the event NEK, not the latest.
-const EVENT_NEK_ID = "0xnek_at_mint_time";
-const LATEST_NEK_ID = "0xnek_after_rotation";
+// NEK encoded into the dynamic field on each PresignSession. The test
+// also seeds a different "latest" NEK to prove the row uses the field
+// NEK, not the operator's current key.
+const FIELD_NEK_ID =
+  "0x0000000000000000000000000000000000000000000000000000000000000001";
+const LATEST_NEK_ID =
+  "0x0000000000000000000000000000000000000000000000000000000000000099";
 
 mock.module("@/config/env", () => ({
   env: { LOG_LEVEL: "silent", NODE_ENV: "test" },
@@ -282,11 +285,7 @@ mock.module("@/shared/db/client", () => ({
   schema: {},
 }));
 
-// Cap fixtures. Caps A and B were minted in the SAME mint tx (so they
-// share `previousTransaction = TX_AB` and both must resolve from a
-// single `getTransaction` fetch). Cap C was minted alone in TX_C. Cap D
-// also shares TX_AB but its presign_id is NOT present in that tx's
-// events, exercising the "event lookup miss => failed" path.
+// Cap fixtures.
 const CAP_A = "0xCAPA";
 const CAP_B = "0xCAPB";
 const CAP_C = "0xCAPC";
@@ -294,54 +293,50 @@ const CAP_D = "0xCAPD";
 const SESSION_A = "0xSESSA";
 const SESSION_B = "0xSESSB";
 const SESSION_C = "0xSESSC";
-const SESSION_D_MISSING = "0xSESSD_NOT_IN_TX";
-const TX_AB = "0xTX_AB";
-const TX_C = "0xTX_C";
+const SESSION_D_MISSING = "0xSESSD_NEK_MISSING";
 
 const PRESIGN_CAP_TYPE = "0xpkg::coordinator_inner::UnverifiedPresignCap";
-const PRESIGN_EVENT_TYPE = "0xpkg::coordinator_inner::PresignRequestEvent";
 
-// Wrap event_data the same way the coordinator does (DWalletSessionEvent).
-function wrappedPresignEvent(
-  presignId: string,
-  nek: string,
-  curve = 0,
-  sigAlgo = 0,
-) {
-  return {
-    eventType: `0xpkg::sessions_manager::DWalletSessionEvent<${PRESIGN_EVENT_TYPE}>`,
-    json: {
-      event_data: {
-        curve,
-        dwallet_id: null,
-        dwallet_network_encryption_key_id: nek,
-        dwallet_public_output: null,
-        presign_id: presignId,
-        signature_algorithm: sigAlgo,
-      },
-    },
-  };
+// Map cap -> session
+const CAP_TO_SESSION: Record<string, string> = {
+  [CAP_A]: SESSION_A,
+  [CAP_B]: SESSION_B,
+  [CAP_C]: SESSION_C,
+  [CAP_D]: SESSION_D_MISSING,
+};
+
+// Per-session curve / signature_algorithm.
+const SESSION_PARAMS: Record<
+  string,
+  { curve: number; signature_algorithm: number }
+> = {
+  [SESSION_A]: { curve: 0, signature_algorithm: 0 },
+  [SESSION_B]: { curve: 0, signature_algorithm: 0 },
+  [SESSION_C]: { curve: 2, signature_algorithm: 1 },
+  [SESSION_D_MISSING]: { curve: 0, signature_algorithm: 0 },
+};
+
+// Sessions whose NEK dynamic field deliberately throws (simulating
+// `getDynamicField` failure when the field is absent or the RPC fails).
+const SESSION_NEK_MISSING = new Set<string>([SESSION_D_MISSING]);
+
+function hexToBytes(hex: string): Uint8Array {
+  const h = hex.startsWith("0x") ? hex.slice(2) : hex;
+  const padded = h.padStart(64, "0");
+  const out = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) {
+    out[i] = Number.parseInt(padded.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
 }
 
 const fakeSuiClient = {
   core: {
     listOwnedObjects: mock(async (_args: unknown) => ({
       objects: [
-        {
-          objectId: CAP_A,
-          type: PRESIGN_CAP_TYPE,
-          previousTransaction: TX_AB,
-        },
-        {
-          objectId: CAP_B,
-          type: PRESIGN_CAP_TYPE,
-          previousTransaction: TX_AB,
-        },
-        {
-          objectId: CAP_C,
-          type: PRESIGN_CAP_TYPE,
-          previousTransaction: TX_C,
-        },
+        { objectId: CAP_A, type: PRESIGN_CAP_TYPE },
+        { objectId: CAP_B, type: PRESIGN_CAP_TYPE },
+        { objectId: CAP_C, type: PRESIGN_CAP_TYPE },
         // Irrelevant object that must not be counted.
         { objectId: "0xCOIN", type: "0x2::coin::Coin<0x2::sui::SUI>" },
       ],
@@ -349,46 +344,36 @@ const fakeSuiClient = {
       cursor: null,
     })),
     getObjects: mock(async (args: { objectIds: string[] }) => {
-      const id = args.objectIds[0];
-      if (id === CAP_A) {
-        return { objects: [{ json: { presign_id: SESSION_A } }] };
-      }
-      if (id === CAP_B) {
-        return { objects: [{ json: { presign_id: SESSION_B } }] };
-      }
-      if (id === CAP_C) {
-        return { objects: [{ json: { presign_id: SESSION_C } }] };
-      }
-      if (id === CAP_D) {
-        return { objects: [{ json: { presign_id: SESSION_D_MISSING } }] };
-      }
-      throw new Error(`unexpected getObjects id ${id}`);
+      const objects = args.objectIds.map((id) => {
+        // Cap content: { presign_id }.
+        const session = CAP_TO_SESSION[id];
+        if (session) {
+          return { json: { presign_id: session } };
+        }
+        // Session content: { curve, signature_algorithm }.
+        const params = SESSION_PARAMS[id];
+        if (params) {
+          return { json: params };
+        }
+        return new Error(`unknown id ${id}`);
+      });
+      return { objects };
     }),
-    // The mint tx for TX_AB carries events for SESSION_A and SESSION_B.
-    // TX_C carries one event for SESSION_C. The "missing" session
-    // intentionally has no event anywhere; it must surface as failed.
-    getTransaction: mock(async (args: { digest: string }) => {
-      if (args.digest === TX_AB) {
+    getDynamicField: mock(
+      async (args: {
+        parentId: string;
+        name: { type: string; bcs: Uint8Array };
+      }) => {
+        if (SESSION_NEK_MISSING.has(args.parentId)) {
+          throw new Error(`no NEK dynamic field on ${args.parentId}`);
+        }
         return {
-          $kind: "Transaction",
-          Transaction: {
-            events: [
-              wrappedPresignEvent(SESSION_A, EVENT_NEK_ID, 0, 0),
-              wrappedPresignEvent(SESSION_B, EVENT_NEK_ID, 0, 0),
-            ],
+          dynamicField: {
+            value: { type: "0x2::object::ID", bcs: hexToBytes(FIELD_NEK_ID) },
           },
         };
-      }
-      if (args.digest === TX_C) {
-        return {
-          $kind: "Transaction",
-          Transaction: {
-            events: [wrappedPresignEvent(SESSION_C, EVENT_NEK_ID, 2, 1)],
-          },
-        };
-      }
-      throw new Error(`unexpected getTransaction digest ${args.digest}`);
-    }),
+      },
+    ),
   },
 };
 
@@ -427,7 +412,7 @@ function seedTrackedCap(suiObjectId: string) {
     network: NETWORK,
     curve: 0,
     signatureAlgorithm: 0,
-    networkEncryptionKeyId: EVENT_NEK_ID,
+    networkEncryptionKeyId: FIELD_NEK_ID,
     status: "ready",
     requestTxDigest: "0xseed",
     signRequestId: null,
@@ -443,23 +428,16 @@ describe("presigns.discover", () => {
     resetState();
     fakeSuiClient.core.listOwnedObjects.mockClear();
     fakeSuiClient.core.getObjects.mockClear();
-    fakeSuiClient.core.getTransaction.mockClear();
+    fakeSuiClient.core.getDynamicField.mockClear();
     fakeIkaClient.getPresign.mockClear();
     fakeIkaClient.getLatestNetworkEncryptionKey.mockClear();
   });
 
   afterAll(() => {
-    // Clears function-level `mock(...)` state. The `drizzle-orm` stub
-    // above intentionally lists every export the in-process suite
-    // touches (eq, and, lt, desc, sql) so the ESM shape it freezes is
-    // forward-compatible with sibling files; otherwise their import
-    // of e.g. `desc` would surface as "Export named 'desc' not found"
-    // because Bun's `mock.module` doesn't add bindings retroactively.
     mock.restore();
   });
 
-  test("binds inserted row to mint-tx NEK, not operator latest", async () => {
-    // No caps seeded; CAP_A, CAP_B, CAP_C are all fresh.
+  test("binds inserted row to dynamic-field NEK, not operator latest", async () => {
     const result = await discover(NETWORK);
 
     expect(result).toEqual({
@@ -471,9 +449,10 @@ describe("presigns.discover", () => {
 
     expect(insertCalls).toHaveLength(3);
     for (const row of insertCalls) {
-      // The decisive assertion: every row picks up the NEK that was
-      // present in the mint tx event, NOT the operator's current key.
-      expect(row.networkEncryptionKeyId).toBe(EVENT_NEK_ID);
+      // The decisive assertion: every row picks up the NEK read from
+      // the PresignSession's dynamic field, NOT the operator's current
+      // key.
+      expect(row.networkEncryptionKeyId).toBe(FIELD_NEK_ID);
       expect(row.networkEncryptionKeyId).not.toBe(LATEST_NEK_ID);
       expect(row.status).toBe("pending");
     }
@@ -500,22 +479,14 @@ describe("presigns.discover", () => {
     expect(insertedIds).toContain(CAP_C);
   });
 
-  test("event lookup miss counts as failed, not inserted", async () => {
-    // Inject a fourth cap pointing at TX_AB. Its presign_id is
-    // SESSION_D_MISSING, which is NOT in TX_AB's events. The cap must
-    // be counted as failed (retry next pass), not silently inserted.
+  test("dynamic-field lookup throwing counts as failed, not inserted", async () => {
+    // Inject a fourth cap whose session deliberately has no NEK dynamic
+    // field. The cap must be counted as failed (retry next pass), not
+    // silently inserted.
     fakeSuiClient.core.listOwnedObjects.mockImplementationOnce(async () => ({
       objects: [
-        {
-          objectId: CAP_A,
-          type: PRESIGN_CAP_TYPE,
-          previousTransaction: TX_AB,
-        },
-        {
-          objectId: CAP_D,
-          type: PRESIGN_CAP_TYPE,
-          previousTransaction: TX_AB,
-        },
+        { objectId: CAP_A, type: PRESIGN_CAP_TYPE },
+        { objectId: CAP_D, type: PRESIGN_CAP_TYPE },
       ],
       hasNextPage: false,
       cursor: null,
@@ -525,21 +496,9 @@ describe("presigns.discover", () => {
 
     expect(result.scanned).toBe(2);
     expect(result.inserted).toBe(1); // only CAP_A landed
-    expect(result.failed).toBe(1); // CAP_D's session missing from events
+    expect(result.failed).toBe(1); // CAP_D's NEK dynamic field threw
     expect(insertCalls).toHaveLength(1);
     expect(insertCalls[0]!.suiObjectId).toBe(CAP_A);
-  });
-
-  test("caches mint tx fetches per unique previousTransaction", async () => {
-    // Two caps in TX_AB + one cap in TX_C => exactly 2 getTransaction
-    // calls, NOT one per cap. This is the whole point of the cache.
-    await discover(NETWORK);
-
-    expect(fakeSuiClient.core.getTransaction).toHaveBeenCalledTimes(2);
-    const calledDigests = fakeSuiClient.core.getTransaction.mock.calls.map(
-      (c) => (c[0] as { digest: string }).digest,
-    );
-    expect(new Set(calledDigests)).toEqual(new Set([TX_AB, TX_C]));
   });
 
   test("all-tracked input is a no-op insert", async () => {
@@ -554,9 +513,10 @@ describe("presigns.discover", () => {
     expect(result.inserted).toBe(0);
     expect(result.failed).toBe(0);
     expect(insertCalls).toHaveLength(0);
-    // No mint-tx fetch needed because every cap was already known.
-    expect(fakeSuiClient.core.getTransaction).not.toHaveBeenCalled();
+    // No cap-content or dynamic-field lookups needed because every cap
+    // was already tracked.
     expect(fakeSuiClient.core.getObjects).not.toHaveBeenCalled();
+    expect(fakeSuiClient.core.getDynamicField).not.toHaveBeenCalled();
   });
 
   test("references the presigns table (sanity check for mock wiring)", () => {

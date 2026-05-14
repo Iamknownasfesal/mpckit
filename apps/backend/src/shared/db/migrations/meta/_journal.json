@@ -15,6 +15,13 @@
       "when": 1778765003301,
       "tag": "0001_familiar_zaran",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778772271117,
+      "tag": "0002_smiling_shooting_star",
+      "breakpoints": true
     }
   ]
 }

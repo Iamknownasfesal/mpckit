@@ -43,7 +43,7 @@ export const presignAdminRoutes = new Elysia({ prefix: "/v1/admin" })
         tags: ["admin"],
         summary: "Presign bucket health",
         description:
-          "Counts per state (`available`, `reserved`, `consumed`) for the (curve, signatureAlgorithm) bucket. Admin only.",
+          "Counts per state (`ready`, `allocated`, `consumed_pending`, `pending`, `used`, `failed`) for the (curve, signatureAlgorithm) bucket, plus a `perNek` breakdown keyed by `network_encryption_key_id`. Sign-time allocation is NEK-scoped, so the per-NEK numbers are the load-bearing ones when the operator has rotated keys. Admin only.",
         security: [{ bearer: [] }],
       },
     },
