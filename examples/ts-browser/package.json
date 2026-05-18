@@ -10,6 +10,6 @@
     "@mpckit/sdk": "workspace:*"
   },
   "devDependencies": {
-    "vite": "^7.3.2"
+    "vite": "^8.0.13"
   }
 }
