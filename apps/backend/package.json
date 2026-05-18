@@ -23,7 +23,7 @@
     "@mpckit/core": "workspace:*",
     "@mpckit/sdk": "workspace:*",
     "@mysten/sui": "^2.16.0",
-    "@noble/curves": "^1.6.0",
+    "@noble/curves": "^2.2.0",
     "@noble/hashes": "^1.5.0",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/auto-instrumentations-node": "^0.76.0",
