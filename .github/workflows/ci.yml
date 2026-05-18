@@ -58,7 +58,7 @@ jobs:
         working-directory: packages/mpckitcore_move
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
       - run: npx -p @mysten/prettier-plugin-move@${{ env.PRETTIER_MOVE_VERSION }} prettier-move -c "sources/**/*.move"
 
   rust-crypto:
